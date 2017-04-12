@@ -1,0 +1,13 @@
+#
+# jira 
+jira[server]='myserver.org'
+jira[jql]='status+%21%3D+Closed+ORDER+BY+createdDate+DESC'
+jira[testjql]='summary+%7E+%22RANDOM'$RANDOM'%22'
+jira[username]='test.user'
+jira[password]='changeme'
+#
+# salesforce 
+sf[loginUrl]='https://login.salesforce.com/services/Soap/c/X.Y/999999000'
+sf[username]='smith@gmail.com'
+sf[password]='qsdfRT3456bnRU_QSD3456'
+sf[queryString]="Select CaseNumber from Case WHERE Status != 'Closed' order by CaseNumber"
