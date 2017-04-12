@@ -84,7 +84,7 @@ sf_query() {
   if [ "${sf[exit_status]}" -eq 0 ] ; then
     sf[http_code]=$(printf "%s" "${sf[response]}" | sed -n '${s/^.*http_code \([0-9]*\)$/\1/p}')
     sf[response]=$(printf "%s" "${sf[response]}" | sed '${s/http_code [0-9]*$//g}')
-    if [[ ! -z "${sf[http_code]}" && "${sf[http_code]}" -eq 200 ] ; then
+    if [[ ! -z "${sf[http_code]}" && "${sf[http_code]}" -eq 200 ]] ; then
       sf[responseSize]=$(printf "%s\n" "${sf[response]}" | sed -n 's/^.*<size>\([0-9]*\)<.size>.*$/\1/p')
     fi
   fi
