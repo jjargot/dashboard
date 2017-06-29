@@ -17,11 +17,17 @@ sf_reset() {
   sf[serverUrl]=
   sf[sessionId]=
   sf[max-time]=5
-  sf[exit_status]=$?
+  sf[exit_status]=0
   sf[http_code]=
   sf[response]=
   sf[queryString]=
   sf[responseSize]=
+}
+
+sf_printenv() {
+  for i in "${!sf[@]}" ; do
+    printf "sf[%s]=%s\n" "${i}" "${sf[$i]}"
+  done
 }
 
 #
@@ -95,7 +101,13 @@ sf_query() {
 #
 # exit status is 1 if one of teh is empty
 #
-sf_table
+sf_table() {
+  records="${response#*?queryLocator xsi:nil=?true?/?}"
+  records="${records%<size>*}"
+  while read record ; do
+    accountName="${record#*><sf:Account xsi:type=?sf:Account?><sf:Id xsi:nil=?true?/><sf:Name>}" ; accountName="${accountName%</sf:Name></sf:Account>*}"
+  done < <(printf "%s" "${records}" | sed 's%</records>%</records>\n%g')
+}
 
 #
 # Execute a SOQL request

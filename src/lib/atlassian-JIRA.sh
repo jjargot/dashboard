@@ -15,16 +15,17 @@ jira_reset() {
   jira[password]="changeme"
   jira[connect-timeout]=1
   jira[max-time]=5
+  jira[maxResult]=50
 }
 
 #
 # Search using the jql filter provided in the jira[jql]  
 #
 # the variables listed below must be defined:
-# jira[server] jira[jql] jira[username] jira[password] jira[connect-timeout] jira[max-time]
+# jira[server] jira[jql] jira[username] jira[password] jira[connect-timeout] jira[max-time] jira[maxResults] jira[fields]
 # 
 searchJql() {
-  jira[response]=$(curl -s --connect-timeout "${jira[connect-timeout]}" --max-time "${jira[max-time]}" -w 'http_code %{http_code}' -u "${jira[username]}":"${jira[password]}" -H "Content-Type: application/json" 'https://'"${jira[server]}"'/rest/api/2/search?jql='"${jira[jql]}")
+  jira[response]=$(curl -s --connect-timeout "${jira[connect-timeout]}" --max-time "${jira[max-time]}" -w 'http_code %{http_code}' -u "${jira[username]}":"${jira[password]}" -H "Content-Type: application/json" 'https://'"${jira[server]}"'/rest/api/2/search?jql='"${jira[jql]}"'&maxResults='"${jira[maxResults]}"'&fields='"${jira[fields]}")
   jira[exit_status]=$?
   if [ "${jira[exit_status]}" -eq 0 ] ; then
     jira[http_code]=$(printf "%s" "${jira[response]}" | sed -n '${s/^.*http_code \([0-9]*\)$/\1/p}')

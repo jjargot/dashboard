@@ -6,8 +6,8 @@
 printf "test->Nominal\n"
 searchJql
 if [ "${jira[exit_status]}" -ne 0 ] ; then
-  printf "curl failed with %s exit status\n" "${jira[resturn_status]}" >&2
-  exit "${jira[resturn_status]}"
+  printf "curl failed with %s exit status\n" "${jira[exit_status]}" >&2
+  exit "${jira[exit_status]}"
 fi
 if [[ "${jira[http_code]}" -ne 200 ]] ; then
   printf "http_code is not equal to 200: %s\n" "${jira[http_code]}" >&2
@@ -27,8 +27,8 @@ printf "test->jira[password]=changemewrong\n"
 jira[password]=changemewrong
 searchJql
 if [ "${jira[exit_status]}" -ne 0 ] ; then
-  printf "curl failed with %s exit status\n" "${jira[resturn_status]}" >&2
-  exit "${jira[resturn_status]}"
+  printf "curl failed with %s exit status\n" "${jira[exit_status]}" >&2
+  exit "${jira[exit_status]}"
 fi
 if [[ "${jira[http_code]}" -ne 401 ]] ; then
   printf "http_code is not equal to 401: %s\n" "${jira[http_code]}" >&2
@@ -40,8 +40,8 @@ printf "test->jira[jql]=randomwrong\n"
 jira[jql]=randomwrong
 searchJql
 if [ "${jira[exit_status]}" -ne 0 ] ; then
-  printf "curl failed with %s exit status\n" "${jira[resturn_status]}" >&2
-  exit "${jira[resturn_status]}"
+  printf "curl failed with %s exit status\n" "${jira[exit_status]}" >&2
+  exit "${jira[exit_status]}"
 fi
 if [[ "${jira[http_code]}" -ne 400 ]] ; then
   printf "http_code is not equal to 400: %s\n" "${jira[http_code]}" >&2
@@ -53,8 +53,8 @@ printf "test->jira[jql]=%s\n" "${jira[testjql]}"
 jira[jql]="${jira[testjql]}"
 searchJql
 if [ "${jira[exit_status]}" -ne 0 ] ; then
-  printf "curl failed with %s exit status\n" "${jira[resturn_status]}" >&2
-  exit "${jira[resturn_status]}"
+  printf "curl failed with %s exit status\n" "${jira[exit_status]}" >&2
+  exit "${jira[exit_status]}"
 fi
 if [[ "${jira[http_code]}" -ne 200 ]] ; then
   printf "http_code is not equal to 200: %s\n" "${jira[http_code]}" >&2

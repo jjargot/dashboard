@@ -8,6 +8,7 @@ jira[password]='changeme'
 #
 # salesforce 
 sf[loginUrl]='https://login.salesforce.com/services/Soap/c/X.Y/999999000'
+sf[tls1LoginUrl]='https://tls1test.salesforce.com/services/Soap/c/X.Y/999999000'
 sf[username]='smith@gmail.com'
 sf[password]='qsdfRT3456bnRU_QSD3456'
 sf[queryString]="Select CaseNumber from Case WHERE Status != 'Closed' order by CaseNumber"
