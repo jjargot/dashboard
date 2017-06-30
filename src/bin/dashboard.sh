@@ -4,8 +4,7 @@
 ## D E P E N D E N C I E S
 ## 
 
-#INSTALL_DIR=/usr/lib/cgi-bin/dashboard
-INSTALL_DIR=/home/jjargot/Documents/project/dashboard/study/prod
+INSTALL_DIR=/usr/lib/cgi-bin/dashboard
 . "${INSTALL_DIR}"/lib/salesforce.sh
 . "${INSTALL_DIR}"/lib/atlassian-JIRA.sh
 
@@ -13,7 +12,7 @@ INSTALL_DIR=/home/jjargot/Documents/project/dashboard/study/prod
 ## C O N F I G U R A T I O N
 ##
 
-CONFIG_DIR=/home/jjargot/Documents/project/dashboard/study/prod/conf
+CONFIG_DIR=/opt/dashboard
 
 . "${CONFIG_DIR}"/production.environment
 
@@ -22,7 +21,7 @@ CONFIG_DIR=/home/jjargot/Documents/project/dashboard/study/prod/conf
 ## F U N C T I O N S
 ## 
 sf_getSingleValue() {
-  sf_login
+  #sf_login
   if [ "${sf[exit_status]}" -eq 0 ] ; then
     if [ "${sf[http_code]}" -eq 200 ] ; then
       #sf[queryString]="${sfOpenCasesSOQL}"
@@ -44,7 +43,7 @@ sf_getSingleValue() {
       else
         value="#Err:request:exit_status=${sf[exit_status]}"
       fi
-      sf_logout
+      #sf_logout
     else
       value="#Err:login:http_status=${sf[http_code]}"  
     fi
@@ -72,7 +71,7 @@ get183daysInPastISODate() {
 ## 
 
 printf "Content-type: text/html\n\n"
-printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">\n<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Bonitasoft Support Monitoring Dashboards</title><link rel="stylesheet" type="text/css" href="dashboard/design.css" media="screen"><script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script><script type="text/javascript">
+printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">\n<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Bonitasoft Support Monitoring Dashboards</title><link rel="stylesheet" type="text/css" href="/dashboard/design.css" media="screen"><script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script><script type="text/javascript">
   var sec = 59; 
 
   google.charts.load("current", {packages:["corechart", "gauge"]});
@@ -131,6 +130,7 @@ printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://w
     var barData = google.visualization.arrayToDataTable([
     ["Type", "Number", { role: "style" },{role: "annotation"}],'
 
+sf_login
 nbOfActiveServiceRequest=$(sf_getSingleValue "${sfActiveServiceRequestSQL}")
 nbOfActiveIncidentRequest=$(sf_getSingleValue "${sfActiveIncidentRequestSQL}")
 nbOfActiveUsageQuestion=$(sf_getSingleValue "${sfActiveUsageQuestionSQL}")
@@ -262,17 +262,15 @@ printf '
         oldCasesGaugeChart = new google.visualization.Gauge(document.getElementById("old_cases_gauge_chart"));
         oldCasesGaugeChart.draw(oldCasesGaugeData, oldCasesGaugeOptions);
       }\n</script>\n</head>\n<body onload="display_c();">\n<div style="height: 350px">'
-sf_login
+#sf_login
 sf[queryString]="${sfWorkListSOQL}"
 sf_query
 records="${sf[response]#*?queryLocator xsi:nil=?true?/?}"
 records="${records%<size>*}"
 responseSize="${sf[responseSize]}"
-sf_logout
+#sf_logout
 nbOfRecordsDisplayed=0
 printf '<table class="fixed" id="caseworklist"><tbody><tr><th style="width: 80px;">Case #</th><th style="width: 145px;">Status</th><th style="width: 56px; text-align: center">Sev.</th><th style="width: 200px;">SLA Deadline</th><th style="width: 115px;">owner name</th><th style="width: 650px;">Subject</th><th style="width: 300px;">Account name</th><th style="width: 125px;">Contact name</th><th style="width: 115px;">Last</th></tr>'
-# 80 | 145 | 56 | 210 | 115 | 650 | 300 | 125 |115
-# 1820
 if [[ ! -z "${responseSize}" && "${responseSize}" =~ [0-9] ]] ; then
 # seconds since 1970-01-01 00:00:00 UTC
   seconds=$(date -u "+%s") 
@@ -351,6 +349,7 @@ fi
 
 nbOfOpenCases=$(sf_getSingleValue "${sfOpenCasesSOQL}")
 nbOfActiveCases=$(sf_getSingleValue "${sfActiveCasesSOQL}")
+sf_logout
 
 printf '<div><div style="background-color: #000000; color: #ffffff;text-align: center;"><h4>%s active cases over a total of %s</h4></div><div id="lastrefreshpanel"> Last refresh <script type="text/javascript">var cd=new Date(); var ctimestr = intToTwoDigitsString(cd.getHours())+":"+intToTwoDigitsString(cd.getMinutes())+":"+intToTwoDigitsString(cd.getSeconds());document.write(ctimestr);</script><br>Next refresh in <span id="remaining">25 s</span> </div></div><br /><table class="columns" style="background-color: #000000; width: 100%%;"><tr><td><div id="type_bar_chart" style="width: 40%%;height: auto;"></div><br><div id="severity_bar_chart" style="width: 40%%;height: auto;"></div></td><td><div id="next0930gauge_chart" style="width: 20%%;height: auto;"></div></td><td><div id="cases_with_bugs_gauge_chart" style="width: 20%%;height: auto;"></div></td><td><div id="old_cases_gauge_chart" style="width: 20%%;height: auto;"></div></td></tr></table>' "${nbOfActiveCases}" "${nbOfOpenCases}"
 if [[ ! -z "${itShouldRingABell}" ]] ; then 
@@ -358,7 +357,8 @@ if [[ ! -z "${itShouldRingABell}" ]] ; then
 fi
 searchJql
 if [ "${jira[exit_status]}" -eq 0 ] ; then
-  if [[ "${jira[http_code]}" -eq 200 ]] ; then
+  if [ "${jira[http_code]}" -eq 200 ] ; then
+    set -x
     maxResults="$(printf "%s\n" "${jira[response]}" |  jq '.maxResults')"
     total="$(printf "%s\n" "${jira[response]}" |  jq '.total')"
     index=0
