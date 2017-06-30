@@ -25,6 +25,8 @@ jira_reset() {
 # jira[server] jira[jql] jira[username] jira[password] jira[connect-timeout] jira[max-time] jira[maxResults] jira[fields]
 # 
 searchJql() {
+  jira[http_code]=""
+  jira[exit_status]=""
   jira[response]=$(curl -s --connect-timeout "${jira[connect-timeout]}" --max-time "${jira[max-time]}" -w 'http_code %{http_code}' -u "${jira[username]}":"${jira[password]}" -H "Content-Type: application/json" 'https://'"${jira[server]}"'/rest/api/2/search?jql='"${jira[jql]}"'&maxResults='"${jira[maxResults]}"'&fields='"${jira[fields]}")
   jira[exit_status]=$?
   if [ "${jira[exit_status]}" -eq 0 ] ; then

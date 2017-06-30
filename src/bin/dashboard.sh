@@ -6,10 +6,16 @@
 
 #INSTALL_DIR=/usr/lib/cgi-bin/dashboard
 INSTALL_DIR=/home/jjargot/Documents/project/dashboard/study/prod
-
 . "${INSTALL_DIR}"/lib/salesforce.sh
 . "${INSTALL_DIR}"/lib/atlassian-JIRA.sh
-. "${INSTALL_DIR}"/conf/production.environment
+
+##
+## C O N F I G U R A T I O N
+##
+
+CONFIG_DIR=/home/jjargot/Documents/project/dashboard/study/prod/conf
+
+. "${CONFIG_DIR}"/production.environment
 
 
 ##
@@ -20,7 +26,7 @@ sf_getSingleValue() {
   if [ "${sf[exit_status]}" -eq 0 ] ; then
     if [ "${sf[http_code]}" -eq 200 ] ; then
       #sf[queryString]="${sfOpenCasesSOQL}"
-      sf[queryString]="${1}"
+      sf[queryString]="${1} ${2}"
       sf_query
       records="${sf[response]#*?queryLocator xsi:nil=?true?/?}"
       records="${records%<size>*}"
@@ -30,7 +36,7 @@ sf_getSingleValue() {
           if [[ ! -z "${responseSize}" && "${responseSize}" = 1 ]] ; then
             value="${records#*<sf:expr0 xsi:type=?xsd:int?>}" ; value="${value%</sf:expr0></records>*}"
           else
-            value="#Err:request:malformed_response"
+            value="#Err:request:malformed response - the response's size is empty or not equal to 1"
           fi
         else
           value="#Err:request:http_status=${sf[http_code]}"
@@ -48,14 +54,19 @@ sf_getSingleValue() {
   printf "%s" "${value}"
 }
 
-getNext0930ISODate() {
-  if [ $(date -u "%u") -lt 5 ] ; then
-    printf "%sT09:30:00Z" $(date --iso-8601 -d "+1 day" -u) 
+getNext0930ISODate() { 
+  if [ $(date -u "+%u") -lt 5 ] ; then
+    nextDate=$(date --iso-8601=seconds -d 'TZ="Europe/Paris" +1 day 09:30' -u)
   else 
-    printf "%sT09:30:00Z\n" $(date --iso-8601 -d "+3 days" -u)
-  fi  
+    nextDate=$(date --iso-8601=seconds -d 'TZ="Europe/Paris" +3 days 09:30' -u)
+  fi
+  printf "%s.000Z" ${nextDate%??????}
 }
 
+get183daysInPastISODate() {
+  nextDate=$(date --iso-8601=seconds -d '-183 days' -u)
+  printf "%s.000Z" ${nextDate%??????}
+}
 ##
 ## M A I N
 ## 
@@ -68,11 +79,15 @@ printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://w
 
   var typeBarChart = null;
   var severityBarChart = null;
-  var gaugeChart = null;
+  var next0930GaugeChart = null;
+  var caseWithBugsGaugeChart = null;
+  var oldCasesGaugeChart = null;
 
   google.charts.setOnLoadCallback(drawTypeBarChart);
   google.charts.setOnLoadCallback(drawSeverityBarChart);
-  google.charts.setOnLoadCallback(drawGauge);
+  google.charts.setOnLoadCallback(drawNext0930Gauge);
+  google.charts.setOnLoadCallback(drawCaseWithBugsGauge);
+  google.charts.setOnLoadCallback(drawOldCasesGauge);
 
   function display_c() {
     var str = "";
@@ -91,7 +106,7 @@ printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://w
     if (sec <= 0) {
       typeBarChart.clearChart();
       severityBarChart.clearChart();
-      gaugeChart.clearChart();
+      next0930GaugeChart.clearChart();
       location.reload(true);
     }
     document.getElementById("remaining").innerHTML = str;
@@ -167,23 +182,85 @@ printf '
         severityBarChart = new google.visualization.BarChart(document.getElementById("severity_bar_chart"));
         severityBarChart.draw(barData, barOptions);
       }
+      function drawNext0930Gauge() {
+        var next0930GaugeData = google.visualization.arrayToDataTable([
+            ["Label", "Value"],'
 
-      function drawGauge() {
-         var gaugeData = google.visualization.arrayToDataTable([
-            ["Label", "Value"],
-                        ["< 12h", 55],
-            ["With bugs", 80],
-            ["Old", 68]
-         ]);
+# sfCaseswithSLADeadLine
+nbOfCasesWithDeadLineBeforeNextFrenchOfficeOpening=$(sf_getSingleValue "${sfCaseswithSLADeadLine}" 'and SLA_Deadline__c &lt; '$(getNext0930ISODate))
+atRiskPerCentage=$(( nbOfCasesWithDeadLineBeforeNextFrenchOfficeOpening * 10 ))
+if [[ "${atRiskPerCentage}" -gt 100 ]] ; then
+  atRiskPerCentage=100
+fi
+printf '
+["%s at risk", %s]'  "${nbOfCasesWithDeadLineBeforeNextFrenchOfficeOpening}" "${atRiskPerCentage}"
+
+
+printf '
+          ]);
+
+        var next0930GaugeOptions = {
+          width: screen.width*0.20, height: screen.height-560-200,
+          redFrom: 85, redTo: 100,
+          yellowFrom:65, yellowTo: 85,
+          greenFrom:0, greenTo: 65,
+          minorTicks: 10,
+        };
+        next0930GaugeChart = new google.visualization.Gauge(document.getElementById("next0930gauge_chart"));
+        next0930GaugeChart.draw(next0930GaugeData, next0930GaugeOptions);
+      }
+      function drawCaseWithBugsGauge() {
+        var gaugeData = google.visualization.arrayToDataTable([
+            ["Label", "Value"],'
+
+# and Issues__c != null sfOpenCasesSOQL
+nbOfCasesWithBugs=$(sf_getSingleValue "${sfOpenCasesSOQL}" 'and Issues__c != null')
+casesWithBugsPerCentage="${nbOfCasesWithBugs}"
+if [[ "${casesWithBugsPerCentage}" -gt 100 ]] ; then
+  casesWithBugsPerCentage=100
+fi
+printf '
+["%s with bugs", %s]'  "${nbOfCasesWithBugs}" "${casesWithBugsPerCentage}"
+
+printf '
+          ]);
 
         var gaugeOptions = {
-          width: screen.width*0.60, height: screen.height-560-200,
-          redFrom: 90, redTo: 100,
-          yellowFrom:75, yellowTo: 90,
-          minorTicks: 2,
+          width: screen.width*0.20, height: screen.height-560-200,
+          greenFrom:0, greenTo: 35,
+          yellowFrom:35, yellowTo: 65,
+          redFrom: 65, redTo: 100,
+          minorTicks: 10,
         };
-        gaugeChart = new google.visualization.Gauge(document.getElementById("gauge_chart"));
-        gaugeChart.draw(gaugeData, gaugeOptions);
+        caseWithBugsGaugeChart = new google.visualization.Gauge(document.getElementById("cases_with_bugs_gauge_chart"));
+        caseWithBugsGaugeChart.draw(gaugeData, gaugeOptions);
+      }
+
+      function drawOldCasesGauge() {
+        var oldCasesGaugeData = google.visualization.arrayToDataTable([
+            ["Label", "Value"],'
+
+# and Issues__c != null sfOpenCasesSOQL
+nbOfOldCases=$(sf_getSingleValue "${sfOpenCasesSOQL}" 'and CreatedDate &lt; '$(get183daysInPastISODate))
+oldCasesPerCentage="${nbOfOldCases}"
+if [[ "${oldCasesPerCentage}" -gt 100 ]] ; then
+  oldCasesPerCentage=100
+fi
+printf '
+["%s Old", %s]'  "${nbOfOldCases}" "${oldCasesPerCentage}"
+
+printf '
+          ]);
+
+        var oldCasesGaugeOptions = {
+          width: screen.width*0.20, height: screen.height-560-200,
+          greenFrom:0, greenTo: 35,
+          yellowFrom:35, yellowTo: 65,
+          redFrom: 65, redTo: 100,
+          minorTicks: 10,
+        };
+        oldCasesGaugeChart = new google.visualization.Gauge(document.getElementById("old_cases_gauge_chart"));
+        oldCasesGaugeChart.draw(oldCasesGaugeData, oldCasesGaugeOptions);
       }\n</script>\n</head>\n<body onload="display_c();">\n<div style="height: 350px">'
 sf_login
 sf[queryString]="${sfWorkListSOQL}"
@@ -275,51 +352,52 @@ fi
 nbOfOpenCases=$(sf_getSingleValue "${sfOpenCasesSOQL}")
 nbOfActiveCases=$(sf_getSingleValue "${sfActiveCasesSOQL}")
 
-printf '<div><div style="background-color: #000000; color: #ffffff">%s active cases over a total of %s</div><div id="lastrefreshpanel"> Last refresh <script type="text/javascript">var cd=new Date(); var ctimestr = intToTwoDigitsString(cd.getHours())+":"+intToTwoDigitsString(cd.getMinutes())+":"+intToTwoDigitsString(cd.getSeconds());document.write(ctimestr);</script><br>Next refresh in <span id="remaining">25 s</span> </div></div><br /><table class="columns" style="background-color: #000000; width: 100%%;"><tr><td><div id="type_bar_chart" style="width: 40%%;height: auto;"></div><br><div id="severity_bar_chart" style="width: 40%%;height: auto;"></div></td><td><div id="gauge_chart" style="width: 60%%;height: auto;"></div></td></tr></table>' "${nbOfActiveCases}" "${nbOfOpenCases}"
+printf '<div><div style="background-color: #000000; color: #ffffff;text-align: center;"><h4>%s active cases over a total of %s</h4></div><div id="lastrefreshpanel"> Last refresh <script type="text/javascript">var cd=new Date(); var ctimestr = intToTwoDigitsString(cd.getHours())+":"+intToTwoDigitsString(cd.getMinutes())+":"+intToTwoDigitsString(cd.getSeconds());document.write(ctimestr);</script><br>Next refresh in <span id="remaining">25 s</span> </div></div><br /><table class="columns" style="background-color: #000000; width: 100%%;"><tr><td><div id="type_bar_chart" style="width: 40%%;height: auto;"></div><br><div id="severity_bar_chart" style="width: 40%%;height: auto;"></div></td><td><div id="next0930gauge_chart" style="width: 20%%;height: auto;"></div></td><td><div id="cases_with_bugs_gauge_chart" style="width: 20%%;height: auto;"></div></td><td><div id="old_cases_gauge_chart" style="width: 20%%;height: auto;"></div></td></tr></table>' "${nbOfActiveCases}" "${nbOfOpenCases}"
 if [[ ! -z "${itShouldRingABell}" ]] ; then 
   printf '<div style="margin-top: 50px;display: none"><br><audio controls="controls" autoplay="autoplay"> <source src="dashboard/bell.mp3" type="audio/mpeg"> <source src="dashboard/bell.wav" type="audio/wav">Your browser does not support the audio element. </audio><br></div>'
 fi
 searchJql
+if [ "${jira[exit_status]}" -eq 0 ] ; then
+  if [[ "${jira[http_code]}" -eq 200 ]] ; then
+    maxResults="$(printf "%s\n" "${jira[response]}" |  jq '.maxResults')"
+    total="$(printf "%s\n" "${jira[response]}" |  jq '.total')"
+    index=0
+    printf '<div><table id="bugWorkList" class="fixed"><tbody><tr><th style="width: 90px;">Key</th><th style="width: 980px;">Summary</th><th style="width: 95px;">Status</th><th style="width: 210px;">Resolution</th><th style="width: 200px;">Updated</th><th style="width: 115px;">Version</th><th style="width: 129px;">Assignee</th></tr>'
+    while (( "${index}" < "${maxResults}" && "${index}" < "${total}" )) ; do
+      key="$(printf "%s\n" "${jira[response]}" |  jq '.issues['"${index}"'].key' | sed 's/^.\(.*\).$/\1/' )"
+      summary="$(printf "%s\n" "${jira[response]}" |  jq '.issues['"${index}"'].fields.summary' | sed -e 's/^.\(.*\).$/\1/' -e 's/[\]//g')"
+      affectedVersions="$(printf "%s\n" "${jira[response]}" |  jq '.issues['"${index}"'].fields.versions[].name' | sed -e 's/'\"'//g' -e 's/ /, /g')"
+      assignee="$(printf "%s\n" "${jira[response]}" |  jq '.issues['"${index}"'].fields.assignee.displayName' | sed 's/^.\(.*\).$/\1/' )"
+      if [ ! -z "${assignee}" ] ; then
+        assignee="${assignee%% *}"
+      fi
+      status="$(printf "%s\n" "${jira[response]}" |  jq '.issues['"${index}"'].fields.status.name' | sed 's/^.\(.*\).$/\1/' )"
+      resolution="$(printf "%s\n" "${jira[response]}" |  jq '.issues['"${index}"'].fields.resolution.name')"
+      if [[ "${resolution}" = "null" ]] ; then
+        resolution=""
+      else
+        resolution="$(printf "%s" "${resolution}" | sed 's/^.\(.*\).$/\1/' )"
+      fi
+      updatedDateTime="$(printf "%s\n" "${jira[response]}" |  jq '.issues['"${index}"'].fields.updated' | sed 's/^.\(.*\).$/\1/' )"
+      printf '<tr class="s3_sla_td"><td>%s</td><td style="max-width:980px;">%s</td><td style="max-width:95px;">%s</td><td style="max-width:210px;">%s</td><td style="max-width:200px;"><script type="text/javascript">document.write(formatInBrowserTZISODateString("%s"));</script></td><td style="max-width:115px;">%s</td><td style="max-width:129px;">%s</td></tr>' "${key}" "${summary}" "${status}" "${resolution}" "${updatedDateTime}" "${affectedVersions}" "${assignee}"
+      index=$((index + 1))
+    done
+    printf '</tbody></table></div>'
+    if (( "${index}" < "${total}" )) ; then
+      nbNotDisplayed=$(( total - index ))
+      if (( "${nbNotDisplayed}" == 1 )) ; then
+        printf '<div style="color:red;text-align: center; vertical-align: middle;">%s bug is not listed</div>' "${nbNotDisplayed}"
+      else
 
-maxResults="$(printf "%s\n" "${jira[response]}" |  jq '.maxResults')"
-total="$(printf "%s\n" "${jira[response]}" |  jq '.total')"
-index=0
-printf '<table id="bugWorkList" class="fixed"><tbody><tr><th style="width: 90px;">Key</th><th style="width: 980px;">Summary</th><th style="width: 95px;">Status</th><th style="width: 210px;">Resolution</th><th style="width: 200px;">Updated</th><th style="width: 115px;">Version</th><th style="width: 129px;">Assignee</th></tr>'
-# 80 + 650 + 145 + 145 + 210 + 145 +115
-# 1490
-# 80 + 800 + 95 + 210 + 200 + 115 +129
-# 1820
-# 80 | 145 | 80 | 210 | 115 | 650 | 300 | 125 |115
-# 1820
-while (( "${index}" < "${maxResults}" && "${index}" < "${total}" )) ; do
-  key="$(printf "%s\n" "${jira[response]}" |  jq '.issues['"${index}"'].key' | sed 's/^.\(.*\).$/\1/' )"
-  summary="$(printf "%s\n" "${jira[response]}" |  jq '.issues['"${index}"'].fields.summary' | sed -e 's/^.\(.*\).$/\1/' -e 's/[\]//g')"
-  affectedVersions="$(printf "%s\n" "${jira[response]}" |  jq '.issues['"${index}"'].fields.versions[].name' | sed -e 's/'\"'//g' -e 's/ /, /g')"
-  assignee="$(printf "%s\n" "${jira[response]}" |  jq '.issues['"${index}"'].fields.assignee.displayName' | sed 's/^.\(.*\).$/\1/' )"
-  if [ ! -z "${assignee}" ] ; then
-    assignee="${assignee%% *}"
-  fi
-  status="$(printf "%s\n" "${jira[response]}" |  jq '.issues['"${index}"'].fields.status.name' | sed 's/^.\(.*\).$/\1/' )"
-  resolution="$(printf "%s\n" "${jira[response]}" |  jq '.issues['"${index}"'].fields.resolution.name')"
-  if [[ "${resolution}" = "null" ]] ; then
-    resolution=""
+        printf '<div style="color:red;text-align: center; vertical-align: middle;">%s bugs are not listed</div>' "${nbNotDisplayed}"
+      fi
+    fi
   else
-    resolution="$(printf "%s" "${resolution}" | sed 's/^.\(.*\).$/\1/' )"
+    printf '<div><table id="bugWorkList" class="fixed"><tbody><tr><th style="width: 90px;">Key</th><th style="width: 980px;">Summary</th><th style="width: 95px;">Status</th><th style="width: 210px;">Resolution</th><th style="width: 200px;">Updated</th><th style="width: 115px;">Version</th><th style="width: 129px;">Assignee</th></tr><tr class="s3_sla_td"><td>##-#####</td><td style="max-width:980px;">HTTP Status Code: %s</td><td style="max-width:95px;">--</td><td style="max-width:210px;">--</td><td style="max-width:200px;">--</td><td style="max-width:115px;">--</td><td style="max-width:129px;">--</td></tr></tbody></table></div>' "${jira[http_code]}"
   fi
-  updatedDateTime="$(printf "%s\n" "${jira[response]}" |  jq '.issues['"${index}"'].fields.updated' | sed 's/^.\(.*\).$/\1/' )"
-  printf '<tr class="s3_sla_td"><td>%s</td><td style="max-width:980px;">%s</td><td style="max-width:95px;">%s</td><td style="max-width:210px;">%s</td><td style="max-width:200px;"><script type="text/javascript">document.write(formatInBrowserTZISODateString("%s"));</script></td><td style="max-width:115px;">%s</td><td style="max-width:129px;">%s</td></tr>' "${key}" "${summary}" "${status}" "${resolution}" "${updatedDateTime}" "${affectedVersions}" "${assignee}"
-  index=$((index + 1))
-done
-printf '</tbody></table></div>'
-if (( "${index}" < "${total}" )) ; then
-  nbNotDisplayed=$(( total - index ))
-  if (( "${nbNotDisplayed}" == 1 )) ; then
-    printf '<div style="color:red;text-align: center; vertical-align: middle;">%s bug is not listed</div>' "${nbNotDisplayed}"
-  else
-
-    printf '<div style="color:red;text-align: center; vertical-align: middle;">%s bugs are not listed</div>' "${nbNotDisplayed}"
-  fi
+else
+  printf '<div><table id="bugWorkList" class="fixed"><tbody><tr><th style="width: 90px;">Key</th><th style="width: 980px;">Summary</th><th style="width: 95px;">Status</th><th style="width: 210px;">Resolution</th><th style="width: 200px;">Updated</th><th style="width: 115px;">Version</th><th style="width: 129px;">Assignee</th></tr><tr class="s3_sla_td"><td>##-#####</td><td style="max-width:980px;">curl exit status: %s</td><td style="max-width:95px;">--</td><td style="max-width:210px;">--</td><td style="max-width:200px;">--</td><td style="max-width:115px;">--</td><td style="max-width:129px;">--</td></tr></tbody></table></div>' "${jira[exit_status]}"
 fi
 printf '</body></html>'
-#printf 'jira[exit_status]=%s\njira[http_code]=%s\njira[response]=%s\n'  "${jira[exit_status]}" "${jira[http_code]}" "${jira[response]}" >&2
+
 
