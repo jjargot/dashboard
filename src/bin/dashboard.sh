@@ -1,6 +1,8 @@
 #!/bin/bash --
 
-# https://developers.google.com/chart/interactive/docs/gallery/gauge
+##
+## D E P E N D E N C I E S
+## 
 
 #INSTALL_DIR=/usr/lib/cgi-bin/dashboard
 INSTALL_DIR=/home/jjargot/Documents/project/dashboard/study/prod
@@ -9,8 +11,57 @@ INSTALL_DIR=/home/jjargot/Documents/project/dashboard/study/prod
 . "${INSTALL_DIR}"/lib/atlassian-JIRA.sh
 . "${INSTALL_DIR}"/conf/production.environment
 
+
+##
+## F U N C T I O N S
+## 
+sf_getSingleValue() {
+  sf_login
+  if [ "${sf[exit_status]}" -eq 0 ] ; then
+    if [ "${sf[http_code]}" -eq 200 ] ; then
+      #sf[queryString]="${sfOpenCasesSOQL}"
+      sf[queryString]="${1}"
+      sf_query
+      records="${sf[response]#*?queryLocator xsi:nil=?true?/?}"
+      records="${records%<size>*}"
+      responseSize="${sf[responseSize]}"
+      if [ "${sf[exit_status]}" -eq 0 ] ; then
+        if [ "${sf[http_code]}" -eq 200 ] ; then
+          if [[ ! -z "${responseSize}" && "${responseSize}" = 1 ]] ; then
+            value="${records#*<sf:expr0 xsi:type=?xsd:int?>}" ; value="${value%</sf:expr0></records>*}"
+          else
+            value="#Err:request:malformed_response"
+          fi
+        else
+          value="#Err:request:http_status=${sf[http_code]}"
+        fi
+      else
+        value="#Err:request:exit_status=${sf[exit_status]}"
+      fi
+      sf_logout
+    else
+      value="#Err:login:http_status=${sf[http_code]}"  
+    fi
+  else 
+    value="#Err:login:exit_status=${sf[exit_status]}"
+  fi
+  printf "%s" "${value}"
+}
+
+getNext0930ISODate() {
+  if [ $(date -u "%u") -lt 5 ] ; then
+    printf "%sT09:30:00Z" $(date --iso-8601 -d "+1 day" -u) 
+  else 
+    printf "%sT09:30:00Z\n" $(date --iso-8601 -d "+3 days" -u)
+  fi  
+}
+
+##
+## M A I N
+## 
+
 printf "Content-type: text/html\n\n"
-printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">\n<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Bonitasoft Support Monitoring Dashboards</title><link rel="stylesheet" type="text/css" href="Bonitasoft%%20Support%%20Monitoring%%20Dashboards-S1-S2-S3+RingingBell_files/design.css" media="screen"><script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script><script type="text/javascript">
+printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">\n<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Bonitasoft Support Monitoring Dashboards</title><link rel="stylesheet" type="text/css" href="dashboard/design.css" media="screen"><script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script><script type="text/javascript">
   var sec = 59; 
 
   google.charts.load("current", {packages:["corechart", "gauge"]});
@@ -38,6 +89,9 @@ printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://w
       str += " s";
     }
     if (sec <= 0) {
+      typeBarChart.clearChart();
+      severityBarChart.clearChart();
+      gaugeChart.clearChart();
       location.reload(true);
     }
     document.getElementById("remaining").innerHTML = str;
@@ -60,10 +114,17 @@ printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://w
   }
   function drawTypeBarChart() {
     var barData = google.visualization.arrayToDataTable([
-    ["Type", "Number", { role: "style" },{role: "annotation"}],
-         ["", 27, "color: #32CD32", "Incident Request 27"],
-         ["", 2, "color: #00BFFF", "Usage Question: 2" ],
-            ["", 15, "color: silver", "Service Request: 15"]
+    ["Type", "Number", { role: "style" },{role: "annotation"}],'
+
+nbOfActiveServiceRequest=$(sf_getSingleValue "${sfActiveServiceRequestSQL}")
+nbOfActiveIncidentRequest=$(sf_getSingleValue "${sfActiveIncidentRequestSQL}")
+nbOfActiveUsageQuestion=$(sf_getSingleValue "${sfActiveUsageQuestionSQL}")
+
+printf '
+    ["", %s, "color: #32CD32", "Incident Request %s"],
+    ["", %s, "color: #00BFFF", "Usage Question: %s" ],
+    ["", %s, "color: silver", "Service Request: %s"]\n' "${nbOfActiveIncidentRequest}" "${nbOfActiveIncidentRequest}" "${nbOfActiveUsageQuestion}" "${nbOfActiveUsageQuestion}" "${nbOfActiveServiceRequest}" "${nbOfActiveServiceRequest}"
+printf '
         ]);
 
         
@@ -81,12 +142,18 @@ printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://w
 
       function drawSeverityBarChart() {
         var barData = google.visualization.arrayToDataTable([
-            ["Type", "Number", { role: "style" },{role: "annotation"}],
-         ["", 2, "color: #ff0000", "Severity 1: 2"],
-         ["", 27, "color: #ffdb00", "Severity 2: 27" ],
-         ["", 22, "color: #ffffff", "Severity 3: 22" ]
-        ]);
+            ["Type", "Number", { role: "style" },{role: "annotation"}],'
 
+nbOfActiveSeverity1=$(sf_getSingleValue "${sfActiveSeverity1SQL}")
+nbOfActiveSeverity2=$(sf_getSingleValue "${sfActiveSeverity2SQL}")
+nbOfActiveSeverity3=$(sf_getSingleValue "${sfActiveSeverity3SQL}")
+
+printf '
+            ["", %s, "color: #ff0000", "Severity 1: %s"],
+            ["", %s, "color: #ffdb00", "Severity 2: %s" ],
+            ["", %s, "color: #ffffff", "Severity 3: %s" ] ' "${nbOfActiveSeverity1}" "${nbOfActiveSeverity1}" "${nbOfActiveSeverity2}" "${nbOfActiveSeverity2}" "${nbOfActiveSeverity3}" "${nbOfActiveSeverity3}"
+printf '
+         ]);
         
         var barOptions = {
           width: screen.width*0.40,
@@ -100,6 +167,7 @@ printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://w
         severityBarChart = new google.visualization.BarChart(document.getElementById("severity_bar_chart"));
         severityBarChart.draw(barData, barOptions);
       }
+
       function drawGauge() {
          var gaugeData = google.visualization.arrayToDataTable([
             ["Label", "Value"],
@@ -112,7 +180,7 @@ printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://w
           width: screen.width*0.60, height: screen.height-560-200,
           redFrom: 90, redTo: 100,
           yellowFrom:75, yellowTo: 90,
-          minorTicks: 5,
+          minorTicks: 2,
         };
         gaugeChart = new google.visualization.Gauge(document.getElementById("gauge_chart"));
         gaugeChart.draw(gaugeData, gaugeOptions);
@@ -203,9 +271,13 @@ if (( "${nbNotDisplayed}" > 0 )) ; then
     printf '<div style="color:red;text-align: center; vertical-align: middle;">%s cases are not listed</div>' "${nbNotDisplayed}"
   fi
 fi
-printf '<div><div style="background-color: #000000; color: #ffffff">44 active cases over a total of 244</div><div id="lastrefreshpanel"> Last refresh <script type="text/javascript">var cd=new Date(); var ctimestr = intToTwoDigitsString(cd.getHours())+":"+intToTwoDigitsString(cd.getMinutes())+":"+intToTwoDigitsString(cd.getSeconds());document.write(ctimestr);</script><br>Next refresh in <span id="remaining">25 s</span> </div></div><br /><table class="columns" style="background-color: #000000; width: 100%%;"><tr><td><div id="type_bar_chart" style="width: 40%%;height: auto;"></div><br><div id="severity_bar_chart" style="width: 40%%;height: auto;"></div></td><td><div id="gauge_chart" style="width: 60%%;height: auto;"></div></td></tr></table>'
+
+nbOfOpenCases=$(sf_getSingleValue "${sfOpenCasesSOQL}")
+nbOfActiveCases=$(sf_getSingleValue "${sfActiveCasesSOQL}")
+
+printf '<div><div style="background-color: #000000; color: #ffffff">%s active cases over a total of %s</div><div id="lastrefreshpanel"> Last refresh <script type="text/javascript">var cd=new Date(); var ctimestr = intToTwoDigitsString(cd.getHours())+":"+intToTwoDigitsString(cd.getMinutes())+":"+intToTwoDigitsString(cd.getSeconds());document.write(ctimestr);</script><br>Next refresh in <span id="remaining">25 s</span> </div></div><br /><table class="columns" style="background-color: #000000; width: 100%%;"><tr><td><div id="type_bar_chart" style="width: 40%%;height: auto;"></div><br><div id="severity_bar_chart" style="width: 40%%;height: auto;"></div></td><td><div id="gauge_chart" style="width: 60%%;height: auto;"></div></td></tr></table>' "${nbOfActiveCases}" "${nbOfOpenCases}"
 if [[ ! -z "${itShouldRingABell}" ]] ; then 
-  printf '<div style="margin-top: 50px;display: none"><br><audio controls="controls" autoplay="autoplay"> <source src="Bonitasoft%%20Support%%20Monitoring%%20Dashboards-S1-S2-S3+RingingBell_files/bell.mp3" type="audio/mpeg"> <source src="Bonitasoft%%20Support%%20Monitoring%%20Dashboards-S1-S2-S3+RingingBell_files/bell.wav" type="audio/wav">Your browser does not support the audio element. </audio><br></div>'
+  printf '<div style="margin-top: 50px;display: none"><br><audio controls="controls" autoplay="autoplay"> <source src="dashboard/bell.mp3" type="audio/mpeg"> <source src="dashboard/bell.wav" type="audio/wav">Your browser does not support the audio element. </audio><br></div>'
 fi
 searchJql
 

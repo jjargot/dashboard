@@ -1,0 +1,131 @@
+/*
+ * debug
+ */
+ 
+/* table, td */
+/* { */
+/* 	border: 1px solid red; */
+/* } */
+
+ 
+ /*
+  * End Debug
+  */
+
+body
+{
+	margin: 0px;
+	width: 1920px;
+	overflow: hidden;
+	background-color: black;
+	color: white;
+}
+
+#caseworklist td
+{
+	
+	border-top: 1px solid gray;
+	overflow: hidden;
+        padding-right: 15px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+}
+
+#bugWorkList td
+{
+	
+	border-top: 1px solid gray;
+	overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+	padding-right: 15px;
+}
+
+#caseworklist 
+{
+	border-bottom: 1px solid gray;
+	font-weight: 900;
+	font-size: 119%;
+/*	font-size: 139%;
+        font-family: arial, "Helvetica Neue", Helvetica, sans-serif;*/
+	overflow: hidden;
+	table-layout: fixed;
+	border-collapse:collapse;
+	margin: 0px;
+}
+
+#bugWorkList 
+{
+	border-bottom: 1px solid gray;
+	font-weight: 900;
+	font-size: 119%;
+/*	font-size: 139%;
+        font-family: arial, "Helvetica Neue", Helvetica, sans-serif;*/
+	overflow: hidden;
+	table-layout: fixed;
+	border-collapse:collapse;
+	margin: 0px;
+}
+
+#lastrefreshpanel
+{
+	float: right;
+	background-color: #f8f864;
+	color: black;
+	border: 1px solid grey;
+}
+
+table.fixed { table-layout:fixed; }
+
+
+#charts
+{
+	margin: 0px;
+	padding: 0px;
+	border-collapse:collapse;
+	text-align: center;
+}
+
+.borderedchartstd
+{
+	padding: 3px;
+/* 	border: 2px solid black; */
+	font-size: 3em;
+	font-weight: bold;
+/* 	font-family:cursive; */
+	font-family: arial, verdana, sans-serif;
+	table-layout: fixed;
+	width: 100%;
+}
+
+.dangerous_sla_td
+{
+	color: red;
+	text-decoration: blink;
+		  animation: blinker 1.7s cubic-bezier(.5, 0, 1, 1) infinite alternate;  
+}
+
+@keyframes blinker {  
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.s1_sla_td {
+	color: #ff8d00;
+}
+
+.s2_sla_td {
+	color: #ffdb00;
+}
+
+.case_td
+{
+	
+}
+
+.gaugechart
+{
+	width: 680px;
+	height: 440px;
+	display: inline-block;
+}
