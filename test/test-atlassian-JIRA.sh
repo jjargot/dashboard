@@ -60,7 +60,7 @@ if [[ "${jira[http_code]}" -ne 200 ]] ; then
   printf "http_code is not equal to 200: %s\n" "${jira[http_code]}" >&2
   exit 1
 fi
-if [[ "${jira[response]}" != '{"startAt":0,"maxResults":50,"total":0,"issues":[]}' ]] ; then
+if [[ "${jira[response]}" != '{"startAt":0,"maxResults":5,"total":0,"issues":[]}' ]] ; then
   printf "some bugs had been found: %s\n" "${jira[response]}" >&2
   exit 1
 fi
