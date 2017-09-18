@@ -2,6 +2,9 @@
 ## Dependencies
 
     $ sudo apt install curl
+    $ sudo apt install dc
+    $ sudo apt install jq
+    $ sudo apt install curl
 
 ## Download
 
