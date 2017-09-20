@@ -18,16 +18,18 @@ body
 	width: 1920px;
 	overflow: hidden;
 	background-color: black;
-	color: white;
+/*	color: white;*/
+        color: #cccccc;
 }
 
 #caseworklist td
 {
 	
 	border-top: 1px solid gray;
-	overflow: hidden;
+/*	overflow: hidden;
+        text-overflow: ellipsis;*/
+        text-overflow:clip;
         padding-right: 15px;
-        text-overflow: ellipsis;
         white-space: nowrap;
 }
 
@@ -41,14 +43,25 @@ body
 	padding-right: 15px;
 }
 
+.banner 
+{
+        font-family:'DejaVu Sans Mono', sans-serif;
+	font-weight: 900;
+	font-size: 28px;
+        background-color: #000000;
+        color: #cccccc;
+        text-align: center;
+}
+
 #caseworklist 
 {
+        font-family:'DejaVu Sans Mono', sans-serif;
 	border-bottom: 1px solid gray;
 	font-weight: 900;
-	font-size: 119%;
-/*	font-size: 139%;
-        font-family: arial, "Helvetica Neue", Helvetica, sans-serif;*/
-	overflow: hidden;
+/*	font-size: 139%;*/
+	font-size: 28px;
+/*        font-family: arial, "Helvetica Neue", Helvetica, sans-serif;*/
+/*	overflow: hidden;*/
 	table-layout: fixed;
 	border-collapse:collapse;
 	margin: 0px;
@@ -58,9 +71,10 @@ body
 {
 	border-bottom: 1px solid gray;
 	font-weight: 900;
-	font-size: 119%;
-/*	font-size: 139%;
-        font-family: arial, "Helvetica Neue", Helvetica, sans-serif;*/
+	font-size: 129%;
+/*	font-size: 25px;*/
+        font-family:'DejaVu Sans Mono', sans-serif;
+        /*font-family: arial, "Helvetica Neue", Helvetica, sans-serif;*/
 	overflow: hidden;
 	table-layout: fixed;
 	border-collapse:collapse;
@@ -93,7 +107,8 @@ table.fixed { table-layout:fixed; }
 	font-size: 3em;
 	font-weight: bold;
 /* 	font-family:cursive; */
-	font-family: arial, verdana, sans-serif;
+	/*font-family: arial, verdana, sans-serif;*/
+        font-family:'DejaVu Sans Mono', sans-serif;
 	table-layout: fixed;
 	width: 100%;
 }
@@ -117,6 +132,13 @@ table.fixed { table-layout:fixed; }
 .s2_sla_td {
 	color: #ffdb00;
 }
+
+.updated_in_progress_td {
+	color: #00ccff;
+        text-decoration: blink;
+        animation: blinker 1.7s cubic-bezier(.5, 0, 1, 1) infinite alternate;  
+}
+
 
 .case_td
 {

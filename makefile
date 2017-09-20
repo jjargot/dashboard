@@ -19,7 +19,7 @@ target/$(PROJECT).zip:
 		cp -r src/bin target/usr/lib/cgi-bin/$(PROJECT) &&\
 		cp -r src/lib target/usr/lib/cgi-bin/$(PROJECT) &&\
 		rm -rf target/var/www/$(PROJECT) &&\
-		cp -r src/resources target/var/www/$(PROJECT) &&\
+		cp -r resources target/var/www/$(PROJECT) &&\
 		cd target &&\
 		zip -9r $(PROJECT).zip *
 

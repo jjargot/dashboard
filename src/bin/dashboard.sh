@@ -40,9 +40,6 @@ declare -A jiraData
 unset cache
 declare -A cache
 
-unset tabColWidth
-declare -A tabColWidth
-
 ##
 ## F U N C T I O N S 
 ##
@@ -252,24 +249,7 @@ getDataWithCache() {
 ## VARIABLES
 ## 
 
-sfTabHeight=310px
-
-tabColWidth[Case]=80px
-tabColWidth[Status]=145px
-tabColWidth[Severity]=56px
-tabColWidth[SLADeadline]=200px
-tabColWidth[Subject]=705px
-tabColWidth[AccountName]=350px
-tabColWidth[ContactName]=150px
-tabColWidth[Owner]=115px
-
-tabColWidth[Key]=90px
-tabColWidth[Summary]=980px
-tabColWidth[jiraStatus]=95px
-tabColWidth[Resolution]=210px
-tabColWidth[Updated]=200px
-tabColWidth[Version]=115px
-tabColWidth[Assignee]=129px
+sfTabHeight=400px
 
 grenobleOfficeOpeningHourParisTZ='09:00'
 sanFranscicoOfficeClosingParisTZ='03:00'
@@ -380,9 +360,6 @@ printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://w
 
   function display_c() {
     if (sec <= 0) {
-      typeBarChart.clearChart();
-      severityBarChart.clearChart();
-      next0930GaugeChart.clearChart();
       document.getElementById("remaining").innerHTML = "";
       document.getElementById("next_refresh").innerHTML = "Reloading ...";
       location.reload(true);
@@ -434,20 +411,33 @@ nbOfActiveIncidentRequest="${sfData[Number_Of_Incident_Requests]}"
 nbOfActiveUsageQuestion="${sfData[Number_Of_Usage_Questions]}"
         
 printf '
-    ["", %s, "color: #32CD32", "Incident Request %s"],
-    ["", %s, "color: #00BFFF", "Usage Question: %s" ],
-    ["", %s, "color: silver", "Service Request: %s"]\n' "${nbOfActiveIncidentRequest}" "${nbOfActiveIncidentRequest}" "${nbOfActiveUsageQuestion}" "${nbOfActiveUsageQuestion}" "${nbOfActiveServiceRequest}" "${nbOfActiveServiceRequest}"
+    ["", %s, "color: #269900", "IR: %s"],
+    ["", %s, "color: #0073e6", "UQ: %s" ],
+    ["", %s, "color: #cccccc", "SR: %s"]\n' "${nbOfActiveIncidentRequest}" "${nbOfActiveIncidentRequest}" "${nbOfActiveUsageQuestion}" "${nbOfActiveUsageQuestion}" "${nbOfActiveServiceRequest}" "${nbOfActiveServiceRequest}"
 printf '
         ]);
 
         
         var barOptions = {
-          width: screen.width*0.40,
           height: (screen.height-560) / 2 - 100,
           legend: {position: "none"},
           backgroundColor: "#000000",
           bar: { groupWidth: "95%%" },
-          xAxis: { backgroundColor: "#ff8d00"}
+          xAxis: { backgroundColor: "#ff8d00"},
+          annotations: {
+            textStyle: {
+              fontName: "DejaVu Sans Mono",
+              fontSize: 28,
+              bold: true,
+              italic: false,
+              auraColor: "#000000",
+              opacity: 1
+            }
+          },
+          chartArea: { 
+            width: "95%%",
+            height: "90%%"
+          }
         };
         typeBarChart = new google.visualization.BarChart(document.getElementById("type_bar_chart"));
         typeBarChart.draw(barData, barOptions);
@@ -463,19 +453,32 @@ nbOfActiveSeverity2="${sfData[Number_Of_S2]}"
 nbOfActiveSeverity3="${sfData[Number_Of_S3]}"
 
 printf '
-            ["", %s, "color: #ff0000", "Severity 1: %s"],
-            ["", %s, "color: #ffdb00", "Severity 2: %s" ],
-            ["", %s, "color: #ffffff", "Severity 3: %s" ] ' "${nbOfActiveSeverity1}" "${nbOfActiveSeverity1}" "${nbOfActiveSeverity2}" "${nbOfActiveSeverity2}" "${nbOfActiveSeverity3}" "${nbOfActiveSeverity3}"
+            ["", %s, "color: #ff8d00", "S1: %s"],
+            ["", %s, "color: #ffdb00", "S2: %s" ],
+            ["", %s, "color: #cccccc", "S3: %s" ] ' "${nbOfActiveSeverity1}" "${nbOfActiveSeverity1}" "${nbOfActiveSeverity2}" "${nbOfActiveSeverity2}" "${nbOfActiveSeverity3}" "${nbOfActiveSeverity3}"
 printf '
          ]);
         
         var barOptions = {
-          width: screen.width*0.40,
           height: (screen.height-560) / 2 - 100,
           legend: {position: "none"},
           backgroundColor: "#000000",
           bar: { groupWidth: "95%%" },
-          xAxis: { backgroundColor: "#ff8d00"}
+          xAxis: { backgroundColor: "#ff8d00"},
+          annotations: {
+            textStyle: {
+              fontName: "DejaVu Sans Mono",
+              fontSize: 28,
+              bold: true,
+              italic: false,
+              auraColor: "#000000",
+              opacity: 1
+            }
+          },
+          chartArea: { 
+            width: "95%%",
+            height: "90%%"
+          }
         };
        
         severityBarChart = new google.visualization.BarChart(document.getElementById("severity_bar_chart"));
@@ -496,11 +499,16 @@ printf '
           ]);
 
         var next0930GaugeOptions = {
-          width: screen.width*0.20, height: screen.height-560-200,
+          width: screen.width*0.18, 
+          height: screen.height-750, 
           redFrom: 85, redTo: 100,
           yellowFrom:65, yellowTo: 85,
           greenFrom:0, greenTo: 65,
           minorTicks: 10,
+          chartArea: { 
+            width: "100%%",
+            height: "100%%"
+          }
         };
         next0930GaugeChart = new google.visualization.Gauge(document.getElementById("next0930gauge_chart"));
         next0930GaugeChart.draw(next0930GaugeData, next0930GaugeOptions);
@@ -518,11 +526,16 @@ printf '
           ]);
 
         var gaugeOptions = {
-          width: screen.width*0.20, height: screen.height-560-200,
+          width: screen.width*0.18,
+          height: screen.height-760,
           greenFrom:0, greenTo: 35,
           yellowFrom:35, yellowTo: 65,
           redFrom: 65, redTo: 100,
           minorTicks: 10,
+          chartArea: { 
+            width: "100%%",
+            height: "100%%"
+          }
         };
         caseWithBugsGaugeChart = new google.visualization.Gauge(document.getElementById("cases_with_bugs_gauge_chart"));
         caseWithBugsGaugeChart.draw(gaugeData, gaugeOptions);
@@ -541,11 +554,16 @@ printf '
           ]);
 
         var oldCasesGaugeOptions = {
-          width: screen.width*0.20, height: screen.height-560-200,
+          width: screen.width*0.18,
+          height: screen.height-760,
           greenFrom:0, greenTo: 35,
           yellowFrom:35, yellowTo: 65,
           redFrom: 65, redTo: 100,
           minorTicks: 10,
+          chartArea: { 
+            width: "100%%",
+            height: "100%%"
+          }
         };
         oldCasesGaugeChart = new google.visualization.Gauge(document.getElementById("old_cases_gauge_chart"));
         oldCasesGaugeChart.draw(oldCasesGaugeData, oldCasesGaugeOptions);
@@ -553,9 +571,30 @@ printf '
 
 nbOfRecordsDisplayed=0
 
-
-
-printf '<table class="fixed" id="caseworklist"><tbody><tr><th style="width: %s;">Case %s</th><th style="width: %s;">Status</th><th style="width: %s; text-align: center">Sev.</th><th style="width: %s;">SLA Deadline</th><th style="width: %s;">Subject</th><th style="width: %s;">Account name</th><th style="width: %s;">Contact name</th><th style="width: %s;">Owner</th></tr>' "${tabColWidth[Case]}" "${sfData[source]}" "${tabColWidth[Status]}" "${tabColWidth[Severity]}" "${tabColWidth[SLADeadline]}" "${tabColWidth[Subject]}" "${tabColWidth[AccountName]}" "${tabColWidth[ContactName]}" "${tabColWidth[Owner]}" 
+printf '
+<table id="caseworklist">
+  <thead style="font-size: %s;">
+      <th>Case %s</th>
+      <th>Status</th>
+      <th>Sev.</th>
+      <th>SLA Deadline</th>
+      <th>Subject</th>
+      <th>Account name</th>
+      <th>Contact</th>
+      <th>Owner</th>
+  </thead>
+  <tbody>
+    <colgroup>
+      <col width="0%%" />
+      <col width="0%%" />
+      <col width="0%%" />
+      <col width="0%%" />
+      <col width="100%%" />
+      <col width="0%%" />
+      <col width="0%%" />
+      <col width="0%%" />
+   </colgroup>\n' "70%" "${sfData[source]}"
+   
 if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_In_Worklist] > 0 )) ; then
   # seconds since 1970-01-01 00:00:00 UTC
   seconds=$(date -u "+%s") 
@@ -597,34 +636,85 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
       if (( "${lastPublicSupportCommentInSeconds}" < ("${lastPublicCommentInSeconds}" - "${toleranceInSeconds}") )) ; then
         lastActiveStatusInSeconds=$(date -d "${lastActiveStatusDateTime}" -u "+%s")
         if (( "${lastActiveStatusInSeconds}" < "${lastPublicSupportCommentInSeconds}" )) ; then
-          class=dangerous_sla_td
+          class=updated_in_progress_td
         fi
       fi
     fi
-    printf '<tr class="%s"><td>%s</td><td>%s</td><td>%s</td><td><script type="text/javascript">document.write(formatInBrowserTZISODateString("%s"));</script></td><td style="max-width:%s;">%s</td><td style="max-width:%s;">%s</td><td>%s</td><td>%s</td></tr>' "${class}" "${caseNumber}" "${status}" "${sev}" "${sLADeadline}" "${tabColWidth[Subject]}" "${subject}" "${tabColWidth[AccountName]}" "${accountName}" "${contactName}" "${last}"
+    printf '<tr class="%s"><td>%s</td><td>%s</td><td>%s</td><td><script type="text/javascript">document.write(formatInBrowserTZISODateString("%s"));</script></td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:1px;">%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:12em;">%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden;max-width:6em;">%s</td><td>%s</td></tr>\n' "${class}" "${caseNumber}" "${status}" "${sev}" "${sLADeadline}" "${subject}" "${accountName}" "${contactName}" "${last}"
     nbOfRecordsDisplayed=$(( nbOfRecordsDisplayed + 1))
   done
+else
+  printf '<tr class="s3_sla_td"><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:1px;">%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:12em;">%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden;max-width:6em;">%s</td><td>%s</td></tr>\n' "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"  "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;"  "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
 fi
-printf '</tbody></table></div>'
+printf '</tbody></table></div>\n'
 nbNotDisplayed=$(( sfData[Number_Of_Cases_In_Worklist] - nbOfRecordsDisplayed ))
 if (( "${nbNotDisplayed}" > 0 )) ; then
   if (( "${nbNotDisplayed}" == 1 )) ; then
-    printf '<div style="color:red;text-align: center; vertical-align: middle;">%s case is not listed</div>' "${nbNotDisplayed}"
+    printf '<div style="color:red;text-align: center; vertical-align: middle;font-size: %s;">%s case is not listed</div>' "139%" "${nbNotDisplayed}"
   else
-    printf '<div style="color:red;text-align: center; vertical-align: middle;">%s cases are not listed</div>' "${nbNotDisplayed}"
+    printf '<div style="color:red;text-align: center; vertical-align: middle;font-size: %s;">%s cases are not listed</div>' "139%" "${nbNotDisplayed}"
   fi
 fi
-
 nbOfOpenCases="${sfData[Number_Of_Open_Cases]}"
 nbOfActiveCases="${sfData[Number_Of_Active_Cases]}"
 
-printf '<div><div style="background-color: #000000; color: #ffffff;text-align: center;"><h3>%s Open Cases -- %s Active Cases -- %s Patches</h3></div><div id="lastrefreshpanel"> Last refresh <script type="text/javascript">var cd=new Date(); var ctimestr = intToTwoDigitsString(cd.getHours())+":"+intToTwoDigitsString(cd.getMinutes())+":"+intToTwoDigitsString(cd.getSeconds());document.write(ctimestr);</script><div id="next_refresh">Next refresh in <span id="remaining">25 s</span></div></div></div><br /><table class="columns" style="background-color: #000000; width: 100%%;"><tr><td><div id="type_bar_chart" style="width: 40%%;height: auto;"></div><br><div id="severity_bar_chart" style="width: 40%%;height: auto;"></div></td><td><div id="next0930gauge_chart" style="width: 20%%;height: auto;"></div></td><td><div id="cases_with_bugs_gauge_chart" style="width: 20%%;height: auto;"></div></td><td><div id="old_cases_gauge_chart" style="width: 20%%;height: auto;"></div></td></tr></table>' "${nbOfOpenCases}" "${nbOfActiveCases}" "${jiraData[patchCount]}"
+printf '
+    <div class="banner">%s Open Cases -- %s Active Cases -- %s Patches
+    </div>
+    <div id="lastrefreshpanel"> Last refresh <script type="text/javascript">var cd=new Date(); var ctimestr = intToTwoDigitsString(cd.getHours())+":"+intToTwoDigitsString(cd.getMinutes())+":"+intToTwoDigitsString(cd.getSeconds());document.write(ctimestr);</script>
+        <div id="next_refresh">Next refresh in <span id="remaining">25 s</span>
+        </div>
+    </div>
+<table style="background-color: #000000; width: 100%%;padding: 0; margin: 0; border-collapse: collapse;">
+  <tr style="background-color: #000000; width: 100%%;padding: 0; margin: 0; border-collapse: collapse;">
+    <td style="background-color: #000000; width: 46%%;padding: 0; margin: 0; border-collapse: collapse;">
+      <div id="type_bar_chart" style="width: 100%%;height: auto;">
+      </div>
+      <div id="severity_bar_chart" style="width: 100%%;height: auto;">
+      </div>
+    </td>
+    <td style="background-color: #000000; width: 18%%;padding: 0; margin: 0; border-collapse: collapse;">
+      <div id="next0930gauge_chart" style="width: 100%%;height: auto;">
+      </div>
+    </td>
+    <td style="background-color: #000000; width: 18%%;padding: 0; margin: 0; border-collapse: collapse;">
+      <div id="cases_with_bugs_gauge_chart" style="width: 100%%;height: auto;">
+      </div>
+    </td>
+    <td style="background-color: #000000; width: 18%%;padding: 0; margin: 0; border-collapse: collapse;">
+      <div id="old_cases_gauge_chart" style="width: 100%%;height: auto;">
+      </div>
+    </td>
+  </tr>
+</table>' "${nbOfOpenCases}" "${nbOfActiveCases}" "${jiraData[patchCount]}"
+
 if [[ ! -z "${itShouldRingABell}" ]] ; then 
   printf '<div style="margin-top: 50px;display: none"><br><audio controls="controls" autoplay="autoplay"> <source src="%s/bell.mp3" type="audio/mpeg"> <source src="%s/bell.wav" type="audio/wav">Your browser does not support the audio element. </audio><br></div>' "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}"
 fi
 
 index=0
-printf '<div><table id="bugWorkList" class="fixed"><tbody><tr><th style="width: %s;">Key %s</th><th style="width: %s;">Summary</th><th style="width: %s;">Status</th><th style="width: %s;">Resolution</th><th style="width: %s;">Updated</th><th style="width: %s;">Version</th><th style="width: %s;">Assignee</th></tr>' "${tabColWidth[Key]}" "${jiraData[source]}" "${tabColWidth[Summary]}" "${tabColWidth[jiraStatus]}" "${tabColWidth[Resolution]}" "${tabColWidth[Updated]}" "${tabColWidth[Version]}" "${tabColWidth[Assignee]}"
+printf '
+<div>
+  <table id="bugWorkList" class="fixed">
+    <thead style="font-size: %s;">
+      <th>Key %s</th>
+      <th>Summary</th>
+      <th>Status</th>
+      <th>Resolution</th>
+      <th>Updated</th>
+      <th>Version</th>
+      <th>Assignee</th>
+    </thead>
+    <tbody>
+    <colgroup>
+      <col width="0%%" />
+      <col width="100%%" />
+      <col width="0%%" />
+      <col width="0%%" />
+      <col width="0%%" />
+      <col width="0%%" />
+      <col width="0%%" />
+   </colgroup>' "70%" "${jiraData[source]}"
 while (( "${index}" < "${jiraData[maxResults]}" && "${index}" < "${jiraData[total]}" )) ; do
   key="$(printf "%s\n" "${jiraData[issues]}" |  jq '.issues['"${index}"'].key' | sed 's/^.\(.*\).$/\1/' )"
   summary="$(printf "%s\n" "${jiraData[issues]}" |  jq '.issues['"${index}"'].fields.summary' | sed -e 's/^.\(.*\).$/\1/' -e 's/[\]//g')"
@@ -641,16 +731,19 @@ while (( "${index}" < "${jiraData[maxResults]}" && "${index}" < "${jiraData[tota
     resolution="$(printf "%s" "${resolution}" | sed 's/^.\(.*\).$/\1/' )"
   fi
   updatedDateTime="$(printf "%s\n" "${jiraData[issues]}" |  jq '.issues['"${index}"'].fields.updated' | sed 's/^.\(.*\).$/\1/' )"
-  printf '<tr class="s3_sla_td"><td>%s</td><td style="max-width:%s;">%s</td><td style="max-width:%s;">%s</td><td style="max-width:%s;">%s</td><td style="max-width:%s;"><script type="text/javascript">document.write(formatInBrowserTZISODateString("%s"));</script></td><td style="max-width:%s;">%s</td><td style="max-width:%s;">%s</td></tr>' "${key}" "${tabColWidth[Summary]}" "${summary}" "${tabColWidth[jiraStatus]}" "${status}" "${tabColWidth[Resolution]}" "${resolution}" "${tabColWidth[Updated]}" "${updatedDateTime}" "${tabColWidth[Version]}" "${affectedVersions}" "${tabColWidth[Assignee]}" "${assignee}"
+  printf '<tr class="s3_sla_td"><td>%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:1px;">%s</td><td>%s</td><td>%s</td><td><script type="text/javascript">document.write(formatInBrowserTZISODateString("%s"));</script></td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden;max-width:9em;">%s</td><td>%s</td></tr>' "${key}" "${summary}" "${status}" "${resolution}" "${updatedDateTime}" "${affectedVersions}" "${assignee}"
   index=$((index + 1))
 done
+if (( "${index}" == 0 )) ; then
+  printf '<tr class="s3_sla_td"><td>%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:1px;">%s</td><td>%s</td><td>%s</td><td>%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden;max-width:9em;">%s</td><td>%s</td></tr>' "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
+fi
 printf '</tbody></table></div>'
 if (( "${index}" < "${jiraData[total]}" )) ; then
   nbNotDisplayed=$(( jiraData[total] - index ))
   if (( "${nbNotDisplayed}" == 1 )) ; then
-    printf '<div style="color:red;text-align: center; vertical-align: middle;">%s bug is not listed</div>' "${nbNotDisplayed}"
+    printf '<div style="color:red;text-align: center; vertical-align: middle;font-size: %s;">%s bug is not listed</div>' "139%" "${nbNotDisplayed}"
   else
-    printf '<div style="color:red;text-align: center; vertical-align: middle;">%s bugs are not listed</div>' "${nbNotDisplayed}"
+    printf '<div style="color:red;text-align: center; vertical-align: middle;font-size: %s;">%s bugs are not listed</div>' "139%" "${nbNotDisplayed}"
   fi
 fi
 printf '</body></html>'
