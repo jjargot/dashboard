@@ -126,14 +126,22 @@ table.fixed { table-layout:fixed; }
 }
 
 .s1_sla_td {
+        text-decoration: none;
 	color: #ff8d00;
 }
 
 .s2_sla_td {
+        text-decoration: none;
 	color: #ffdb00;
 }
 
+.s3_sla_td {
+        text-decoration: none;
+        color: #cccccc;
+}
+
 .updated_in_progress_td {
+        text-decoration: none;
 	color: #00ccff;
         text-decoration: blink;
         animation: blinker 1.7s cubic-bezier(.5, 0, 1, 1) infinite alternate;  

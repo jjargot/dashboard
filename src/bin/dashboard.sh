@@ -182,6 +182,7 @@ getDataWithCache() {
   fi
   if [ "${useCache}" = no -o "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${cache[timeToLiveInSeconds]}" ] ; then
     sfData[source]="(i)"
+    sfData[serverUrl]='https://eu4.salesforce.com/services/Soap/c/26.0/00D20000000NBwJ/0DFD00000000uIk'
     sfData[response]='{"hasErrors":false,"results":[{"statusCode":200,"result":
 {"totalSize":1,"done":true,"records":[{"attributes":{"type":"AggregateResult"},"Number_Of_Service_Requests":0}]}},{"statusCode":200,"result":
 {"totalSize":1,"done":true,"records":[{"attributes":{"type":"AggregateResult"},"Number_Of_Incident_Requests":0}]}},{"statusCode":200,"result":
@@ -203,8 +204,9 @@ getDataWithCache() {
         if [ ! -z "${sf[exit_status]}" -a ! -z "${sf[http_code]}" ] ; then 
           if [ "${sf[exit_status]}" -eq 0 -a "${sf[http_code]}" -eq 200 ] ; then
             sfData[source]=
+            sfData[serverUrl]="${sf[serverUrl]}"
             sfData[response]="${sf[response]}"
-            printf "%s" "${sfData[response]}" > "${cache[sfFile]}"
+            printf '{ "serverUrl": "%s", "response": %s }' "${sfData[serverUrl]}" "${sfData[response]}" > "${cache[sfFile]}"
           fi
         fi
         # sf_logout is useless and take 1 sec approx
@@ -212,7 +214,8 @@ getDataWithCache() {
     fi
   else
     sfData[source]="(c)"
-    sfData[response]="$(cat "${cache[sfFile]}")"
+    sfData[serverUrl]="$(cat "${cache[sfFile]}" | jq -r '.serverUrl')"
+    sfData[response]="$(cat "${cache[sfFile]}" | jq -r '.response')"
   fi
   durationInSecondsSinceTheCacheWasUpdated=${cache[timeToLiveInSeconds]}
   if [ -f "${cache[jiraFile]}" -a "${useCache}" = yes ] ; then
@@ -596,13 +599,30 @@ printf '
    </colgroup>\n' "70%" "${sfData[source]}"
    
 if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_In_Worklist] > 0 )) ; then
+#
+#
+# <td><a href="foo">bar</a></td>
+#
+# td { padding: someValue; } td a { display: block; margin: -someValue; padding: someValue; } You may also want to add text-decoration: none to the td a. 
+#
+#
   # seconds since 1970-01-01 00:00:00 UTC
   seconds=$(date -u "+%s") 
   itShouldRingABell=
   records="$(printf '%s' "${sfData[response]}" | jq 'select(.hasErrors == false) | .results[] | select (.statusCode == 200) | .result | first(select(.records[].attributes.type == "Case")) | .records')"
   nbOfRecordsDisplayed=0
+  serverUrl="${sfData[serverUrl]%%/services/*}"
   while (( nbOfRecordsDisplayed < sfData[Number_Of_Cases_Listed_In_Worklist] )) ; do
-    eval $(printf '%s' "${records}" | jq -r '.['"${nbOfRecordsDisplayed}"'] | (@sh "accountName=\(.Account.Name) caseNumber=\(.CaseNumber) contactName=\(.Contact.LastName) last=\(.LastSupportCommentBy__c) ownerName=\(.Owner.FirstName) sLADeadline=\(.SLA_Deadline__c) sev=\(.Severity__c) issueNotFixedYet=\(.IssueNotFixedYet__c) lastPublicSupportCommentDateTime=\(.LastCaseCommentFromBonitaSoft__c) lastPublicCommentDateTime=\(.LastPublicCommentDateTime__c) lastActiveStatusDateTime=\(.LastActiveStatusDateTime__c) status=\(.Status) subject=\(.Subject) ")')
+    if [ ! -z "${DBG}" ] ; then
+      exec 2> /tmp/dbg.dashboard
+      set -x 
+    fi
+    eval $(printf '%s' "${records}" | jq -r '.['"${nbOfRecordsDisplayed}"'] | (@sh "accountName=\(.Account.Name) caseNumber=\(.CaseNumber) contactName=\(.Contact.LastName) last=\(.LastSupportCommentBy__c) ownerName=\(.Owner.FirstName) sLADeadline=\(.SLA_Deadline__c) sev=\(.Severity__c) issueNotFixedYet=\(.IssueNotFixedYet__c) lastPublicSupportCommentDateTime=\(.LastCaseCommentFromBonitaSoft__c) lastPublicCommentDateTime=\(.LastPublicCommentDateTime__c) lastActiveStatusDateTime=\(.LastActiveStatusDateTime__c) status=\(.Status) subject=\(.Subject) caseUrl=\(.attributes.url) subscriptionId=\(.Subscription__c) ")')
+    caseUrl="${serverUrl}"'/apex/CaseView?id='"${caseUrl##*/}"
+    subscriptionUrl="${serverUrl}/${subscriptionId}"
+    if [ ! -z "${DBG}" ] ; then
+      set +x 
+    fi
     if [ ! -z "${last}" ] ; then
       last="${last%% *}"
       if [ "${last}" = null ] ; then
@@ -617,9 +637,12 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
         last="${ownerName}"
       fi
     fi
+    if [ -z "${last}" ] ; then
+      last="&nbsp;"
+    fi
     diffInSeconds="36000"
     if [ "${sLADeadline}" = null ] ; then
-      sLADeadline="--"
+      sLADeadline=""
     else
       diffInSeconds=$(date -d "${sLADeadline}" -u "+%s ${seconds}-p" | dc)
     fi
@@ -640,7 +663,49 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
         fi
       fi
     fi
-    printf '<tr class="%s"><td>%s</td><td>%s</td><td>%s</td><td><script type="text/javascript">document.write(formatInBrowserTZISODateString("%s"));</script></td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:1px;">%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:12em;">%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden;max-width:6em;">%s</td><td>%s</td></tr>\n' "${class}" "${caseNumber}" "${status}" "${sev}" "${sLADeadline}" "${subject}" "${accountName}" "${contactName}" "${last}"
+    printf '
+    <tr>
+        <td>
+          <a class="%s" href="%s" target="_blank" style="display: block;">%s
+          </a>
+        </td>        
+        <td>
+          <a class="%s" href="%s" target="_blank" style="display: block;">%s
+          </a>
+        </td>
+        <td>
+          <a class="%s" href="%s" target="_blank" style="display: block;">%s
+          </a>
+        </td>
+        <td>
+          <a class="%s" href="%s" target="_blank" style="display: block;">
+            <script type="text/javascript">
+              var sladl="%s";
+              if (sladl.length < 10) {
+                document.write("&nbsp; -- &nbsp;");
+              } else {
+                document.write(formatInBrowserTZISODateString(sladl));
+              }
+            </script>
+          </a>
+        </td>
+        <td style="max-width:1px;">
+          <a class="%s" href="%s" target="_blank" style="display: block; white-space: nowrap; text-overflow:ellipsis; overflow: hidden;">%s
+          </a>
+        </td>
+        <td style="max-width:12em;">
+          <a class="%s" href="%s" target="_blank" style="display: block; white-space: nowrap; text-overflow:ellipsis; overflow: hidden;">%s
+          </a>
+        </td>
+        <td style="max-width:6em;">
+          <a class="%s" href="%s" target="_blank" style="display: block; white-space: nowrap; text-overflow:ellipsis; overflow: hidden;">%s
+          </a>
+        </td>
+        <td>
+          <a class="%s" href="%s" target="_blank" style="display: block;">%s
+          </a>
+        </td>
+    </tr>\n' "${class}" "${caseUrl}" "${caseNumber}" "${class}" "${caseUrl}" "${status}" "${class}" "${caseUrl}" "${sev}" "${class}" "${caseUrl}" "${sLADeadline}" "${class}" "${caseUrl}" "${subject}" "${class}" "${subscriptionUrl}" "${accountName}" "${class}" "${caseUrl}" "${contactName}" "${class}" "${caseUrl}" "${last}"
     nbOfRecordsDisplayed=$(( nbOfRecordsDisplayed + 1))
   done
 else
@@ -668,25 +733,29 @@ printf '
 <table style="background-color: #000000; width: 100%%;padding: 0; margin: 0; border-collapse: collapse;">
   <tr style="background-color: #000000; width: 100%%;padding: 0; margin: 0; border-collapse: collapse;">
     <td style="background-color: #000000; width: 46%%;padding: 0; margin: 0; border-collapse: collapse;">
-      <div id="type_bar_chart" style="width: 100%%;height: auto;">
+      <div id="type_bar_chart" style="width: 100%%;height: 100%%;">
       </div>
-      <div id="severity_bar_chart" style="width: 100%%;height: auto;">
-      </div>
-    </td>
-    <td style="background-color: #000000; width: 18%%;padding: 0; margin: 0; border-collapse: collapse;">
-      <div id="next0930gauge_chart" style="width: 100%%;height: auto;">
+      <div id="severity_bar_chart" style="width: 100%%;height: 100%%;">
       </div>
     </td>
     <td style="background-color: #000000; width: 18%%;padding: 0; margin: 0; border-collapse: collapse;">
-      <div id="cases_with_bugs_gauge_chart" style="width: 100%%;height: auto;">
+      <div id="next0930gauge_chart" style="width: 100%%;height: 100%%;">
       </div>
     </td>
     <td style="background-color: #000000; width: 18%%;padding: 0; margin: 0; border-collapse: collapse;">
-      <div id="old_cases_gauge_chart" style="width: 100%%;height: auto;">
-      </div>
+      <a href="%s" target="_blank">
+        <div id="cases_with_bugs_gauge_chart" style="width: 100%%;height: 100%%;">
+        </div>
+      </a>
+    </td>
+    <td style="background-color: #000000; width: 18%%;padding: 0; margin: 0; border-collapse: collapse;">
+      <a href="%s" target="_blank">
+        <div id="old_cases_gauge_chart" style="width: 100%%;height: 100%%;">
+        </div>
+      </a>
     </td>
   </tr>
-</table>' "${nbOfOpenCases}" "${nbOfActiveCases}" "${jiraData[patchCount]}"
+</table>' "${nbOfOpenCases}" "${nbOfActiveCases}" "${jiraData[patchCount]}" "${sfCasesWithBugListHREF}" "${sfOldCasesWithoutBugListHREF}" 
 
 if [[ ! -z "${itShouldRingABell}" ]] ; then 
   printf '<div style="margin-top: 50px;display: none"><br><audio controls="controls" autoplay="autoplay"> <source src="%s/bell.mp3" type="audio/mpeg"> <source src="%s/bell.wav" type="audio/wav">Your browser does not support the audio element. </audio><br></div>' "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}"
