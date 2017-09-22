@@ -682,7 +682,7 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
             <script type="text/javascript">
               var sladl="%s";
               if (sladl.length < 10) {
-                document.write("&nbsp; -- &nbsp;");
+                document.write("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
               } else {
                 document.write(formatInBrowserTZISODateString(sladl));
               }
@@ -694,7 +694,8 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
           </a>
         </td>
         <td style="max-width:12em;">
-          <a class="%s" href="%s" target="_blank" style="display: block; white-space: nowrap; text-overflow:ellipsis; overflow: hidden;">%s
+          <a class="%s" href="%s" target="_blank" style="display: block; white-space: nowrap; text-overflow:ellipsis; overflow: hidden;">
+            %s
           </a>
         </td>
         <td style="max-width:6em;">
@@ -719,6 +720,8 @@ if (( "${nbNotDisplayed}" > 0 )) ; then
   else
     printf '<div style="color:red;text-align: center; vertical-align: middle;font-size: %s;">%s cases are not listed</div>' "139%" "${nbNotDisplayed}"
   fi
+else
+  printf '<div style="color:red;text-align: center; vertical-align: middle;font-size: %s;">&nbsp</div>' "139%"
 fi
 nbOfOpenCases="${sfData[Number_Of_Open_Cases]}"
 nbOfActiveCases="${sfData[Number_Of_Active_Cases]}"
