@@ -15,11 +15,14 @@
 body
 {
 	margin: 0px;
-	width: 1920px;
 	overflow: hidden;
 	background-color: black;
 /*	color: white;*/
         color: #cccccc;
+        max-width: none;
+        width: auto;
+        min-width: 100%;
+
 }
 
 #caseworklist td
@@ -51,6 +54,9 @@ body
         background-color: #000000;
         color: #cccccc;
         text-align: center;
+        max-width: none;
+        width: auto;
+        min-width: 100%;
 }
 
 #caseworklist 
@@ -65,6 +71,9 @@ body
 	table-layout: fixed;
 	border-collapse:collapse;
 	margin: 0px;
+        max-width: none;
+        width: auto;
+        min-width: 100%;
 }
 
 #bugWorkList 
@@ -79,6 +88,9 @@ body
 	table-layout: fixed;
 	border-collapse:collapse;
 	margin: 0px;
+        max-width: none;
+        width: auto;
+        min-width: 100%;
 }
 
 #lastrefreshpanel

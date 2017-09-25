@@ -180,7 +180,7 @@ getDataWithCache() {
   if [ -f "${cache[sfFile]}" -a "${useCache}" = yes ] ; then
     durationInSecondsSinceTheCacheWasUpdated=$(date -d "$(stat "${cache[sfFile]}" | sed -n 's/^Modify: //p')" -u "+""$(date -u +%s)"" %s-p" | dc)
   fi
-  if [ "${useCache}" = no -o "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${cache[timeToLiveInSeconds]}" ] ; then
+  if [ \( "${useCache}" = no -a "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${minimalTimeWithoutRequestsInSeconds}" \) -o "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${cache[timeToLiveInSeconds]}" ] ; then
     sfData[source]="(i)"
     sfData[serverUrl]='https://eu4.salesforce.com/services/Soap/c/26.0/00D20000000NBwJ/0DFD00000000uIk'
     sfData[response]='{"hasErrors":false,"results":[{"statusCode":200,"result":
@@ -221,7 +221,7 @@ getDataWithCache() {
   if [ -f "${cache[jiraFile]}" -a "${useCache}" = yes ] ; then
     durationInSecondsSinceTheCacheWasUpdated=$(date -d "$(stat "${cache[jiraFile]}" | sed -n 's/^Modify: //p')" -u "+""$(date -u +%s)"" %s-p" | dc)
   fi
-  if [ "${useCache}" = no -o "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${cache[timeToLiveInSeconds]}" ] ; then
+  if [ \( "${useCache}" = no -a "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${minimalTimeWithoutRequestsInSeconds}" \) -o "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${cache[timeToLiveInSeconds]}" ] ; then
     jiraData[source]="(i)"
     jiraData[issues]='{ "expand": "schema,names", "startAt": 0, "maxResults": 0, "total": 0, "issues": [] }'
     jiraData[patchCount]=0
@@ -271,6 +271,10 @@ fi
 
 if [ -z "${cache[timeToLiveInSeconds]}" ] ; then
   cache[timeToLiveInSeconds]=60
+fi
+
+if [ -z "${minimalTimeWithoutRequestsInSeconds}" ] ; then
+  minimalTimeWithoutRequestsInSeconds=$(( cache[timeToLiveInSeconds] / 2 ))
 fi
 
 if [ ! -d "${cache[directory]}" ] ; then
@@ -397,10 +401,12 @@ printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://w
     }
     return twodigits;
   }
-  function formatInBrowserTZISODateString(iSODateTimeString) {
-    var d = new Date(iSODateTimeString);
+  function formatInBrowserTZISODate(d) {
     var dateString = intToTwoDigitsString(d.getDate()) + "/" + intToTwoDigitsString(d.getMonth()+1) + "/" + d.getFullYear() + " " + intToTwoDigitsString(d.getHours()) + ":" + intToTwoDigitsString(d.getMinutes());
     return dateString;
+  }
+  function formatInBrowserTZISODateString(iSODateTimeString) {
+    return formatInBrowserTZISODate(new Date(iSODateTimeString));
   } ' "${HTML_RESOURCES_DIR}"
 
 printf '
@@ -420,9 +426,8 @@ printf '
 printf '
         ]);
 
-        
         var barOptions = {
-          height: (screen.height-560) / 2 - 100,
+          height: screen.height*0.166,
           legend: {position: "none"},
           backgroundColor: "#000000",
           bar: { groupWidth: "95%%" },
@@ -462,8 +467,9 @@ printf '
 printf '
          ]);
         
+        /**  height: (screen.height-560) / 2 - 100,*/
         var barOptions = {
-          height: (screen.height-560) / 2 - 100,
+          height: screen.height*0.166,
           legend: {position: "none"},
           backgroundColor: "#000000",
           bar: { groupWidth: "95%%" },
@@ -502,15 +508,14 @@ printf '
           ]);
 
         var next0930GaugeOptions = {
-          width: screen.width*0.18, 
-          height: screen.height-750, 
+          height: screen.height*0.333, 
           redFrom: 85, redTo: 100,
           yellowFrom:65, yellowTo: 85,
           greenFrom:0, greenTo: 65,
           minorTicks: 10,
           chartArea: { 
-            width: "100%%",
-            height: "100%%"
+            width: "95%%",
+            height: "90%%"
           }
         };
         next0930GaugeChart = new google.visualization.Gauge(document.getElementById("next0930gauge_chart"));
@@ -529,8 +534,7 @@ printf '
           ]);
 
         var gaugeOptions = {
-          width: screen.width*0.18,
-          height: screen.height-760,
+          height: screen.height*0.333,
           greenFrom:0, greenTo: 35,
           yellowFrom:35, yellowTo: 65,
           redFrom: 65, redTo: 100,
@@ -557,8 +561,7 @@ printf '
           ]);
 
         var oldCasesGaugeOptions = {
-          width: screen.width*0.18,
-          height: screen.height-760,
+          height: screen.height*0.333,
           greenFrom:0, greenTo: 35,
           yellowFrom:35, yellowTo: 65,
           redFrom: 65, redTo: 100,
@@ -652,6 +655,21 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
         class=dangerous_sla_td
         itShouldRingABell=yes
       fi
+      eval "$(date -u -d "${sLADeadline}" "+yearUTC=%Y monthUTC=%m dayUTC=%d hourUTC=%H minuteUTC=%M secondUTC=%S nanosecondUTC=%N")"
+      milisecondUTC="${nanosecondUTC:0:3}"
+      sLADeadline='<script type="text/javascript">
+                     var d=new Date();
+                     d.setUTCFullYear('"${yearUTC}"');
+                     d.setUTCMonth('"${monthUTC}"' - 1);
+                     d.setUTCDate('"${dayUTC}"');
+                     d.setUTCHours('"${hourUTC}"');
+                     d.setUTCMinutes('"${minuteUTC}"');
+                     d.setUTCSeconds('"${secondUTC}"');
+                     d.setUTCMilliseconds('"${milisecondUTC}"');
+                     document.write(formatInBrowserTZISODate(d));
+                   </script>'
+    else
+      sLADeadline='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
     fi
     if [[ "${issueNotFixedYet}" = false && "${class}" != dangerous_sla_td && "${lastPublicSupportCommentDateTime}" != null ]] ; then
       lastPublicSupportCommentInSeconds=$(date -d "${lastPublicSupportCommentDateTime}" -u "+%s")
@@ -679,17 +697,10 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
         </td>
         <td>
           <a class="%s" href="%s" target="_blank" style="display: block;">
-            <script type="text/javascript">
-              var sladl="%s";
-              if (sladl.length < 10) {
-                document.write("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
-              } else {
-                document.write(formatInBrowserTZISODateString(sladl));
-              }
-            </script>
+            %s
           </a>
         </td>
-        <td style="max-width:1px;">
+        <td style="max-width:10em; min-width:10em;">
           <a class="%s" href="%s" target="_blank" style="display: block; white-space: nowrap; text-overflow:ellipsis; overflow: hidden;">%s
           </a>
         </td>
@@ -716,12 +727,12 @@ printf '</tbody></table></div>\n'
 nbNotDisplayed=$(( sfData[Number_Of_Cases_In_Worklist] - nbOfRecordsDisplayed ))
 if (( "${nbNotDisplayed}" > 0 )) ; then
   if (( "${nbNotDisplayed}" == 1 )) ; then
-    printf '<div style="color:red;text-align: center; vertical-align: middle;font-size: %s;">%s case is not listed</div>' "139%" "${nbNotDisplayed}"
+    printf '<div style="color:red;text-align: center; vertical-align: middle; max-width: none; width: auto; min-width: 100%%; font-size: %s;">%s case is not listed</div>' "139%" "${nbNotDisplayed}"
   else
-    printf '<div style="color:red;text-align: center; vertical-align: middle;font-size: %s;">%s cases are not listed</div>' "139%" "${nbNotDisplayed}"
+    printf '<div style="color:red;text-align: center; vertical-align: middle; max-width: none; width: auto; min-width: 100%%; font-size: %s;">%s cases are not listed</div>' "139%" "${nbNotDisplayed}"
   fi
 else
-  printf '<div style="color:red;text-align: center; vertical-align: middle;font-size: %s;">&nbsp</div>' "139%"
+  printf '<div style="color:red;text-align: center; vertical-align: middle; max-width: none; width: auto; min-width: 100%%; font-size: %s;">&nbsp</div>' "139%"
 fi
 nbOfOpenCases="${sfData[Number_Of_Open_Cases]}"
 nbOfActiveCases="${sfData[Number_Of_Active_Cases]}"
@@ -733,32 +744,37 @@ printf '
         <div id="next_refresh">Next refresh in <span id="remaining">25 s</span>
         </div>
     </div>
-<table style="background-color: #000000; width: 100%%;padding: 0; margin: 0; border-collapse: collapse;">
-  <tr style="background-color: #000000; width: 100%%;padding: 0; margin: 0; border-collapse: collapse;">
-    <td style="background-color: #000000; width: 46%%;padding: 0; margin: 0; border-collapse: collapse;">
-      <div id="type_bar_chart" style="width: 100%%;height: 100%%;">
+<table style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 100%%;">
+  <tr style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 100%%;">
+    <td style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 46%%;">
+      <div id="type_bar_chart" style="height: 100%%;max-width: none; width: auto; min-width: 100%%;">
+      <img src="%s/barchart1.png"></img>
       </div>
-      <div id="severity_bar_chart" style="width: 100%%;height: 100%%;">
-      </div>
-    </td>
-    <td style="background-color: #000000; width: 18%%;padding: 0; margin: 0; border-collapse: collapse;">
-      <div id="next0930gauge_chart" style="width: 100%%;height: 100%%;">
+      <div id="severity_bar_chart" style="height: 100%%;max-width: none; width: auto; min-width: 100%%;">
+      <img src="%s/barchart2.png"></img>
       </div>
     </td>
     <td style="background-color: #000000; width: 18%%;padding: 0; margin: 0; border-collapse: collapse;">
-      <a href="%s" target="_blank">
-        <div id="cases_with_bugs_gauge_chart" style="width: 100%%;height: 100%%;">
+      <div id="next0930gauge_chart" style="height: 100%%;">
+        <img src="%s/gauge1.png"></img>
+      </div>
+    </td>
+    <td style="background-color: #000000; width: 18%%;padding: 0; margin: 0; border-collapse: collapse;">
+      <a href="%s" target="_blank" style="max-width: none; width: auto; min-width: 100%%;">
+        <div id="cases_with_bugs_gauge_chart" style="height: 100%%;">
+        <img src="%s/gauge2.png"></img>
         </div>
       </a>
     </td>
     <td style="background-color: #000000; width: 18%%;padding: 0; margin: 0; border-collapse: collapse;">
-      <a href="%s" target="_blank">
-        <div id="old_cases_gauge_chart" style="width: 100%%;height: 100%%;">
+      <a href="%s" target="_blank" style="max-width: none; width: auto; min-width: 100%%;">
+        <div id="old_cases_gauge_chart" style="height: 100%%;">
+        <img src="%s/gauge3.png"></img>
         </div>
       </a>
     </td>
   </tr>
-</table>' "${nbOfOpenCases}" "${nbOfActiveCases}" "${jiraData[patchCount]}" "${sfCasesWithBugListHREF}" "${sfOldCasesWithoutBugListHREF}" 
+</table>' "${nbOfOpenCases}" "${nbOfActiveCases}" "${jiraData[patchCount]}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${sfCasesWithBugListHREF}" "${HTML_RESOURCES_DIR}" "${sfOldCasesWithoutBugListHREF}" "${HTML_RESOURCES_DIR}" 
 
 if [[ ! -z "${itShouldRingABell}" ]] ; then 
   printf '<div style="margin-top: 50px;display: none"><br><audio controls="controls" autoplay="autoplay"> <source src="%s/bell.mp3" type="audio/mpeg"> <source src="%s/bell.wav" type="audio/wav">Your browser does not support the audio element. </audio><br></div>' "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}"
@@ -803,7 +819,21 @@ while (( "${index}" < "${jiraData[maxResults]}" && "${index}" < "${jiraData[tota
     resolution="$(printf "%s" "${resolution}" | sed 's/^.\(.*\).$/\1/' )"
   fi
   updatedDateTime="$(printf "%s\n" "${jiraData[issues]}" |  jq '.issues['"${index}"'].fields.updated' | sed 's/^.\(.*\).$/\1/' )"
-  printf '<tr class="s3_sla_td"><td>%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:1px;">%s</td><td>%s</td><td>%s</td><td><script type="text/javascript">document.write(formatInBrowserTZISODateString("%s"));</script></td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden;max-width:9em;">%s</td><td>%s</td></tr>' "${key}" "${summary}" "${status}" "${resolution}" "${updatedDateTime}" "${affectedVersions}" "${assignee}"
+  eval "$(date -u -d "${updatedDateTime}" "+yearUTC=%Y monthUTC=%m dayUTC=%d hourUTC=%H minuteUTC=%M secondUTC=%S nanosecondUTC=%N")"
+  milisecondUTC="${nanosecondUTC:0:3}"
+  updatedDateTime='<script type="text/javascript">
+                     var d=new Date();
+                     d.setUTCFullYear('"${yearUTC}"');
+                     d.setUTCMonth('"${monthUTC}"' - 1);
+                     d.setUTCDate('"${dayUTC}"');
+                     d.setUTCHours('"${hourUTC}"');
+                     d.setUTCMinutes('"${minuteUTC}"');
+                     d.setUTCSeconds('"${secondUTC}"');
+                     d.setUTCMilliseconds('"${milisecondUTC}"');
+                     document.write(formatInBrowserTZISODate(d));
+                   </script>'
+
+  printf '<tr class="s3_sla_td"><td>%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:1px;">%s</td><td>%s</td><td>%s</td><td>%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden;max-width:9em;">%s</td><td>%s</td></tr>' "${key}" "${summary}" "${status}" "${resolution}" "${updatedDateTime}" "${affectedVersions}" "${assignee}"
   index=$((index + 1))
 done
 if (( "${index}" == 0 )) ; then
