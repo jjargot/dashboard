@@ -12,12 +12,12 @@
   * End Debug
   */
 
+
 body
 {
 	margin: 0px;
 	overflow: hidden;
 	background-color: black;
-/*	color: white;*/
         color: #cccccc;
         max-width: none;
         width: auto;
@@ -29,8 +29,6 @@ body
 {
 	
 	border-top: 1px solid gray;
-/*	overflow: hidden;
-        text-overflow: ellipsis;*/
         text-overflow:clip;
         padding-right: 15px;
         white-space: nowrap;
@@ -40,17 +38,17 @@ body
 {
 	
 	border-top: 1px solid gray;
-	overflow: hidden;
-        text-overflow: ellipsis;
+        text-overflow: clip;
         white-space: nowrap;
 	padding-right: 15px;
 }
 
 .banner 
 {
-        font-family:'DejaVu Sans Mono', sans-serif;
+        font-family:'APHont Bold', sans-serif;
 	font-weight: 900;
 	font-size: 28px;
+        letter-spacing: 1px;
         background-color: #000000;
         color: #cccccc;
         text-align: center;
@@ -61,13 +59,11 @@ body
 
 #caseworklist 
 {
-        font-family:'DejaVu Sans Mono', sans-serif;
+        font-family:'APHont Bold', sans-serif;
 	border-bottom: 1px solid gray;
 	font-weight: 900;
-/*	font-size: 139%;*/
 	font-size: 28px;
-/*        font-family: arial, "Helvetica Neue", Helvetica, sans-serif;*/
-/*	overflow: hidden;*/
+        letter-spacing: 1px;
 	table-layout: fixed;
 	border-collapse:collapse;
 	margin: 0px;
@@ -78,13 +74,11 @@ body
 
 #bugWorkList 
 {
+        font-family:'APHont Bold', sans-serif;
 	border-bottom: 1px solid gray;
 	font-weight: 900;
 	font-size: 129%;
-/*	font-size: 25px;*/
-        font-family:'DejaVu Sans Mono', sans-serif;
-        /*font-family: arial, "Helvetica Neue", Helvetica, sans-serif;*/
-	overflow: hidden;
+        letter-spacing: 1px;
 	table-layout: fixed;
 	border-collapse:collapse;
 	margin: 0px;
@@ -118,9 +112,10 @@ table.fixed { table-layout:fixed; }
 /* 	border: 2px solid black; */
 	font-size: 3em;
 	font-weight: bold;
+        letter-spacing: 1px;
 /* 	font-family:cursive; */
 	/*font-family: arial, verdana, sans-serif;*/
-        font-family:'DejaVu Sans Mono', sans-serif;
+        font-family:'APHont Bold', sans-serif;
 	table-layout: fixed;
 	width: 100%;
 }
@@ -171,3 +166,28 @@ table.fixed { table-layout:fixed; }
 	height: 440px;
 	display: inline-block;
 }
+
+.message {
+    left:20%;
+    position: relative;
+    -webkit-animation-name: translation; /* Safari 4.0 - 8.0 */
+    -webkit-animation-duration: 4s; /* Safari 4.0 - 8.0 */
+    animation-name: translation;
+    animation-duration: 60s;
+    animation-iteration-count: infinite;
+}
+
+/* Safari 4.0 - 8.0 */
+@-webkit-keyframes translation {
+    0% {left:20%;}
+    50%   {left:-20%;}
+    100%   {left:20%;}
+}
+
+/* Standard syntax */
+@keyframes translation {
+    0% {left:20%;}
+    50%   {left:-20%;}
+    100%   {left:20%;}
+}
+

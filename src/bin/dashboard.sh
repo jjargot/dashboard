@@ -40,6 +40,10 @@ declare -A jiraData
 unset cache
 declare -A cache
 
+unset motd
+declare -A motd
+
+
 ##
 ## F U N C T I O N S 
 ##
@@ -130,6 +134,57 @@ getNext18HoursOfWorkISODateTime() {
 }
 
 #
+# return SOQL Where clause to filter the case with SLA Deadline outside working hours
+getSOQLClauseForSLADeadlineOutsideWorkingHours() {
+  grenobleOfficeOpeningHour="10:00"
+  parisTZ='TZ="Europe/Paris"'
+  dayOfTheWeek=$(date -u "+%u")
+  if ((  dayOfTheWeek == 7 || dayOfTheWeek == 6 )) ; then
+    # Sunday + Saturday
+    nextDate=$(date --iso-8601=seconds -u -d "${parisTZ} next monday ${grenobleOfficeOpeningHour}")
+    printf "SLA_Deadline__c <= %sZ" "${nextDate%??????}"
+    return 0
+  fi
+
+  grenobleOfficeClosingHour="16:30"
+  sanfranciscoOfficeOpeningHour="19:00"
+  sanfranciscoOfficeClosingHour="00:30"
+  soqlFilter=
+  currentDateTimeInSecondsSinceEPOCH=$(date -u "+%s")
+  # Friday
+  grenobleOfficeOpeningHourInSecondSinceEPOCH=$(date -u -d "${parisTZ} ${grenobleOfficeOpeningHour}" "+%s")
+  grenobleOfficeOpeningHourDateTime=$(date --iso-8601=seconds -u -d "${parisTZ} ${grenobleOfficeOpeningHour}")
+  if (( currentDateTimeInSecondsSinceEPOCH < grenobleOfficeOpeningHourInSecondSinceEPOCH )) ; then
+    # before 09:30
+    soqlFilter="SLA_Deadline__c <= ${grenobleOfficeOpeningHourDateTime%??????}Z"
+  fi
+  sanfranciscoOfficeOpeningHourInSecondSinceEPOCH=$(date -u -d "${parisTZ} ${sanfranciscoOfficeOpeningHour}" "+%s")
+  if (( currentDateTimeInSecondsSinceEPOCH < sanfranciscoOfficeOpeningHourInSecondSinceEPOCH )) ; then
+    if [ ! -z "${soqlFilter}" ] ; then
+      soqlFilter="${soqlFilter} OR "
+    fi
+    grenobleOfficeClosingHourDateTime=$(date --iso-8601=seconds -u -d "${parisTZ} ${grenobleOfficeClosingHour}")
+    sanfranciscoOfficeOpeningHourDateTime=$(date --iso-8601=seconds -u -d "${parisTZ} ${sanfranciscoOfficeOpeningHour}")
+    soqlFilter="${soqlFilter}(SLA_Deadline__c >= ${grenobleOfficeClosingHourDateTime%??????}Z AND SLA_Deadline__c <= ${sanfranciscoOfficeOpeningHourDateTime%??????}Z)"
+  fi
+  if [ ! -z "${soqlFilter}" ] ; then
+    soqlFilter="${soqlFilter} OR "
+  fi
+  sanfranciscoOfficeClosingHourDateTime=$(date --iso-8601=seconds -u -d "${parisTZ} next day ${sanfranciscoOfficeClosingHour}")
+  if ((  dayOfTheWeek == 5 )) ; then
+    nextGrenobleOfficeOpeningHourDateTime=$(date --iso-8601=seconds -u -d "${parisTZ} next monday ${grenobleOfficeOpeningHour}")
+  else
+    nextGrenobleOfficeOpeningHourDateTime=$(date --iso-8601=seconds -u -d "${parisTZ} next day ${grenobleOfficeOpeningHour}")
+  fi
+  if [[ "${soqlFilter}" =~ " OR " ]] ; then 
+    printf '( %s )' "${soqlFilter}(SLA_Deadline__c >= ${sanfranciscoOfficeClosingHourDateTime%??????}Z AND SLA_Deadline__c <= ${nextGrenobleOfficeOpeningHourDateTime%??????}Z)"
+  else
+    printf '%s' "${soqlFilter}(SLA_Deadline__c >= ${sanfranciscoOfficeClosingHourDateTime%??????}Z AND SLA_Deadline__c <= ${nextGrenobleOfficeOpeningHourDateTime%??????}Z)"
+  fi
+}
+
+
+#
 # return ISO date and time of next Grenoble office working day at 09:30
 # the output is formated is a way it can be used in a SOQL query 
 getSanFranciscoOfficeClosingHourISODateTime() { 
@@ -190,7 +245,7 @@ getDataWithCache() {
 {"totalSize":1,"done":true,"records":[{"attributes":{"type":"AggregateResult"},"Number_Of_S1":0}]}},{"statusCode":200,"result":
 {"totalSize":1,"done":true,"records":[{"attributes":{"type":"AggregateResult"},"Number_Of_S2":0}]}},{"statusCode":200,"result":
 {"totalSize":1,"done":true,"records":[{"attributes":{"type":"AggregateResult"},"Number_Of_S3":0}]}},{"statusCode":200,"result":
-{"totalSize":1,"done":true,"records":[{"attributes":{"type":"AggregateResult"},"Number_of_Cases_With_SLADeadLine_Within_Next_18_Working_Hours":0}]}},{"statusCode":200,"result":
+{"totalSize":1,"done":true,"records":[{"attributes":{"type":"AggregateResult"},"Number_of_Cases_With_SLADeadline_Outside_Office_Hour":0}]}},{"statusCode":200,"result":
 {"totalSize":1,"done":true,"records":[{"attributes":{"type":"AggregateResult"},"Number_Of_Open_Cases_With_Bugs":0}]}},{"statusCode":200,"result":
 {"totalSize":1,"done":true,"records":[{"attributes":{"type":"AggregateResult"},"Number_Of_Old_Cases_Without_Bug":0}]}},{"statusCode":200,"result":
 {"totalSize":0,"done":true,"records":[]}},{"statusCode":200,"result":
@@ -289,7 +344,7 @@ sfData[Number_Of_Usage_Questions]=""
 sfData[Number_Of_S1]=""
 sfData[Number_Of_S2]=""
 sfData[Number_Of_S3]=""
-sfData[Number_of_Cases_With_SLADeadLine_Within_Next_18_Working_Hours]=""
+sfData[Number_of_Cases_With_SLADeadline_Outside_Office_Hour]=""
 sfData[Number_Of_Open_Cases_With_Bugs]=""
 sfData[Number_Of_Old_Cases_Without_Bug]=""
 sfData[Number_Of_Cases_In_Worklist]=""
@@ -304,6 +359,10 @@ jqFilterEnd=$(printf ',(@sh "sfData[%s]=\(select(.%s) |.%s)")' $(printf "%s\n" "
 jqFilter="${jqFilter}${jqFilterEnd:1}"
 
 
+if [ ! -z "${DBG}" ] ; then
+  exec 2> /tmp/dbg.dashboard
+  set -x 
+fi
 #
 # batch of salesforce requests
 sf[batchRequestBody]='{ "batchRequests" : ['
@@ -313,7 +372,7 @@ sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${
 sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfActiveSeverity1SQL}")'"}'
 sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfActiveSeverity2SQL}")'"}'
 sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfActiveSeverity3SQL}")'"}'
-sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfCaseswithSLADeadLineprefix} Number_of_Cases_With_SLADeadLine_Within_Next_18_Working_Hours ${sfCaseswithSLADeadLinesuffix} and SLA_Deadline__c <= "$(getNext18HoursOfWorkISODateTime))'"}'
+sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfCaseswithSLADeadLineprefix} Number_of_Cases_With_SLADeadline_Outside_Office_Hour ${sfCaseswithSLADeadLinesuffix} AND ""$(getSOQLClauseForSLADeadlineOutsideWorkingHours)")'"}'
 sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfOpenCasesWithBugsSOQL}")'"}'
 sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfOpenCasesSOQLprefix} Number_Of_Old_Cases_Without_Bug ${sfOpenCasesSOQLsuffix} and Issues__c = null and CreatedDate < "$(get14daysInPastISODate))'"}'
 sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfWorkListSOQL}")'"}'
@@ -321,6 +380,9 @@ sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${
 sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfOpenCasesSOQL}")'"}'
 sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfActiveCasesSOQL}")'"}'
 sf[batchRequestBody]="${sf[batchRequestBody]}"']}'
+if [ ! -z "${DBG}" ] ; then
+  set +x 
+fi
 
 
 # set HTML_RESOURCES_DIR to another value for test
@@ -347,8 +409,16 @@ if [ -z "${jiraData[maxResults]}" -o -z "${jiraData[total]}" ] ; then
   jiraData[total]=0
 fi
 
-printf "Content-type: text/html\n\n"
-printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">\n<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Bonitasoft Support Monitoring Dashboards</title><link rel="stylesheet" type="text/css" href="%s/design.css" media="screen"><script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script><script type="text/javascript">
+if [ -z "${TEST_DASHBOARD}" ] ; then 
+  printf "Content-type: text/html\n\n"
+fi
+
+printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">\n<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0" /><title>Bonitasoft Support Monitoring Dashboards</title><style type="text/css" media="screen, print">
+@font-face {
+  font-family: "APHont Bold";
+  src: url("%s/aphont-bold.ttf");
+}</style>
+<link rel="stylesheet" type="text/css" href="%s/design.css" media="screen"><script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script><script type="text/javascript">
   var sec = 299; 
 
   google.charts.load("current", {packages:["corechart", "gauge"]});
@@ -407,7 +477,7 @@ printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://w
   }
   function formatInBrowserTZISODateString(iSODateTimeString) {
     return formatInBrowserTZISODate(new Date(iSODateTimeString));
-  } ' "${HTML_RESOURCES_DIR}"
+  } ' "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}"
 
 printf '
   function drawTypeBarChart() {
@@ -498,10 +568,10 @@ printf '
             ["Label", "Value"],'
 
 # sfCaseswithSLADeadLine
-nbOfCasesWithDeadLineInside18NextWorkingHours="${sfData[Number_of_Cases_With_SLADeadLine_Within_Next_18_Working_Hours]}"
-percentageCasesWithDeadLineInside18NextWorkingHours=$(( (nbOfCasesWithDeadLineInside18NextWorkingHours * 85) / 10 ))
+nbOfCasesWithDeadLineOutsideWorkingHour="${sfData[Number_of_Cases_With_SLADeadline_Outside_Office_Hour]}"
+percentageCasesWithDeadLineInside18NextWorkingHours=$(( (nbOfCasesWithDeadLineOutsideWorkingHour * 85) / 10 ))
 printf '
-["%s cases", %s]' "${nbOfCasesWithDeadLineInside18NextWorkingHours}" "${percentageCasesWithDeadLineInside18NextWorkingHours}"
+["%s at risk", %s]' "${nbOfCasesWithDeadLineOutsideWorkingHour}" "${percentageCasesWithDeadLineInside18NextWorkingHours}"
 
 
 printf '
@@ -684,15 +754,18 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
     printf '
     <tr>
         <td>
-          <a class="%s" href="%s" target="_blank" style="display: block;">%s
+          <a class="%s" href="%s" target="_blank" style="display: block;">
+            %s
           </a>
         </td>        
         <td>
-          <a class="%s" href="%s" target="_blank" style="display: block;">%s
+          <a class="%s" href="%s" target="_blank" style="display: block;">
+            %s
           </a>
         </td>
         <td>
-          <a class="%s" href="%s" target="_blank" style="display: block;">%s
+          <a class="%s" href="%s" target="_blank" style="display: block;">
+            %s
           </a>
         </td>
         <td>
@@ -701,7 +774,8 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
           </a>
         </td>
         <td style="max-width:10em; min-width:10em;">
-          <a class="%s" href="%s" target="_blank" style="display: block; white-space: nowrap; text-overflow:ellipsis; overflow: hidden;">%s
+          <a class="%s" href="%s" target="_blank" style="display: block; white-space: nowrap; text-overflow:ellipsis; overflow: hidden;">
+            %s
           </a>
         </td>
         <td style="max-width:12em;">
@@ -710,11 +784,13 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
           </a>
         </td>
         <td style="max-width:6em;">
-          <a class="%s" href="%s" target="_blank" style="display: block; white-space: nowrap; text-overflow:ellipsis; overflow: hidden;">%s
+          <a class="%s" href="%s" target="_blank" style="display: block; white-space: nowrap; text-overflow:ellipsis; overflow: hidden;">
+            %s
           </a>
         </td>
         <td>
-          <a class="%s" href="%s" target="_blank" style="display: block;">%s
+          <a class="%s" href="%s" target="_blank" style="display: block;">
+            %s
           </a>
         </td>
     </tr>\n' "${class}" "${caseUrl}" "${caseNumber}" "${class}" "${caseUrl}" "${status}" "${class}" "${caseUrl}" "${sev}" "${class}" "${caseUrl}" "${sLADeadline}" "${class}" "${caseUrl}" "${subject}" "${class}" "${subscriptionUrl}" "${accountName}" "${class}" "${caseUrl}" "${contactName}" "${class}" "${caseUrl}" "${last}"
@@ -737,9 +813,23 @@ fi
 nbOfOpenCases="${sfData[Number_Of_Open_Cases]}"
 nbOfActiveCases="${sfData[Number_Of_Active_Cases]}"
 
+#    <div class="banner">%s Open Cases -- %s Active Cases -- %s Patches
+#    </div>
 printf '
-    <div class="banner">%s Open Cases -- %s Active Cases -- %s Patches
-    </div>
+    <table style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 100%%;">
+      <tbody style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 100%%;">
+      <tr class="banner">
+        <td style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 46%%;">
+          %s Open Cases -- %s Active Cases -- %s Patches
+        </td>        
+        <td style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 54%%;">
+          <div class="message">
+            %s
+          <div>
+        </td>
+      </tr>
+      </tbody>
+    </table>
     <div id="lastrefreshpanel"> Last refresh <script type="text/javascript">var cd=new Date(); var ctimestr = intToTwoDigitsString(cd.getHours())+":"+intToTwoDigitsString(cd.getMinutes())+":"+intToTwoDigitsString(cd.getSeconds());document.write(ctimestr);</script>
         <div id="next_refresh">Next refresh in <span id="remaining">25 s</span>
         </div>
@@ -774,7 +864,7 @@ printf '
       </a>
     </td>
   </tr>
-</table>' "${nbOfOpenCases}" "${nbOfActiveCases}" "${jiraData[patchCount]}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${sfCasesWithBugListHREF}" "${HTML_RESOURCES_DIR}" "${sfOldCasesWithoutBugListHREF}" "${HTML_RESOURCES_DIR}" 
+</table>' "${nbOfOpenCases}" "${nbOfActiveCases}" "${jiraData[patchCount]}" "${motd[$(LC_TIME="en_US.UTF-8" date "+%A")]}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${sfCasesWithBugListHREF}" "${HTML_RESOURCES_DIR}" "${sfOldCasesWithoutBugListHREF}" "${HTML_RESOURCES_DIR}" 
 
 if [[ ! -z "${itShouldRingABell}" ]] ; then 
   printf '<div style="margin-top: 50px;display: none"><br><audio controls="controls" autoplay="autoplay"> <source src="%s/bell.mp3" type="audio/mpeg"> <source src="%s/bell.wav" type="audio/wav">Your browser does not support the audio element. </audio><br></div>' "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}"
@@ -782,8 +872,7 @@ fi
 
 index=0
 printf '
-<div>
-  <table id="bugWorkList" class="fixed">
+  <table id="bugWorkList" style="min-width: 980px;">
     <thead style="font-size: %s;">
       <th>Key %s</th>
       <th>Summary</th>
@@ -805,6 +894,7 @@ printf '
    </colgroup>' "70%" "${jiraData[source]}"
 while (( "${index}" < "${jiraData[maxResults]}" && "${index}" < "${jiraData[total]}" )) ; do
   key="$(printf "%s\n" "${jiraData[issues]}" |  jq '.issues['"${index}"'].key' | sed 's/^.\(.*\).$/\1/' )"
+  bugURL="${atlassianURL}${key}"
   summary="$(printf "%s\n" "${jiraData[issues]}" |  jq '.issues['"${index}"'].fields.summary' | sed -e 's/^.\(.*\).$/\1/' -e 's/[\]//g')"
   affectedVersions="$(printf "%s\n" "${jiraData[issues]}" |  jq '.issues['"${index}"'].fields.versions[].name' | sed -e 's/'\"'//g' -e 's/ /, /g')"
   assignee="$(printf "%s\n" "${jiraData[issues]}" |  jq '.issues['"${index}"'].fields.assignee.displayName' | sed 's/^.\(.*\).$/\1/' )"
@@ -833,13 +923,50 @@ while (( "${index}" < "${jiraData[maxResults]}" && "${index}" < "${jiraData[tota
                      document.write(formatInBrowserTZISODate(d));
                    </script>'
 
-  printf '<tr class="s3_sla_td"><td>%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:1px;">%s</td><td>%s</td><td>%s</td><td>%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden;max-width:9em;">%s</td><td>%s</td></tr>' "${key}" "${summary}" "${status}" "${resolution}" "${updatedDateTime}" "${affectedVersions}" "${assignee}"
+  printf '
+  <tr>
+    <td>
+      <a class="s3_sla_td" href="%s" target="_blank" style="display: block;">
+        %s
+      </a>
+    </td>
+    <td style="max-width:10em; min-width:10em; width=auto;">
+      <a class="s3_sla_td" href="%s" target="_blank" style="width=auto; display: block; white-space: nowrap; text-overflow:ellipsis; overflow: hidden; ">
+        %s
+      </a>
+    </td>
+    <td>
+      <a class="s3_sla_td" href="%s" target="_blank" style="display: block;">
+        %s
+      </a>
+    </td>
+    <td>
+      <a class="s3_sla_td" href="%s" target="_blank" style="display: block;">
+        %s
+      </a>
+    </td>
+    <td>
+      <a class="s3_sla_td" href="%s" target="_blank" style="display: block;">
+        %s
+      </a>
+    </td>
+    <td style="max-width:9em;">
+      <a class="s3_sla_td" href="%s" target="_blank" style="display: block; white-space: nowrap; text-overflow:ellipsis; overflow: hidden;">
+        %s
+      </a>
+    </td>
+    <td>
+      <a class="s3_sla_td" href="%s" target="_blank" style="display: block;">
+        %s
+      </a>
+    </td>
+  </tr>' "${bugURL}" "${key}" "${bugURL}" "${summary}" "${bugURL}" "${status}" "${bugURL}" "${resolution}" "${bugURL}" "${updatedDateTime}" "${bugURL}" "${affectedVersions}" "${bugURL}" "${assignee}"
   index=$((index + 1))
 done
 if (( "${index}" == 0 )) ; then
   printf '<tr class="s3_sla_td"><td>%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:1px;">%s</td><td>%s</td><td>%s</td><td>%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden;max-width:9em;">%s</td><td>%s</td></tr>' "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
 fi
-printf '</tbody></table></div>'
+printf '</tbody></table>'
 if (( "${index}" < "${jiraData[total]}" )) ; then
   nbNotDisplayed=$(( jiraData[total] - index ))
   if (( "${nbNotDisplayed}" == 1 )) ; then
