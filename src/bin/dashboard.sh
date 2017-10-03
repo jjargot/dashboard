@@ -813,6 +813,39 @@ fi
 nbOfOpenCases="${sfData[Number_Of_Open_Cases]}"
 nbOfActiveCases="${sfData[Number_Of_Active_Cases]}"
 
+motdJSString='<div>&nbsp</div>'
+if [[ ${#motd[@]} > 0 ]] ; then
+  unset jsDOW
+  declare -A jsDOW
+  jsDOW[Sunday]=0; jsDOW[Monday]=1; jsDOW[Tuesday]=2; jsDOW[Wednesday]=3; jsDOW[Thursday]=4; jsDOW[Friday]=5; jsDOW[Saturday]=6;
+  elementList=""
+  for day in Sunday Monday Tuesday Wednesday Thursday Friday Saturday ; do
+    if [[ ! -z ${motd[$day]} ]] ; then
+      if [[ ! -z "${elementList}" ]] ; then
+        elementList="${elementList}",'"'${motd[$day]}'"'
+      else
+        elementList='"'${motd[$day]}'"'
+      fi
+    else
+      if [[ ! -z "${elementList}" ]] ; then
+        elementList="${elementList}",'"&nbsp"'
+      else
+        elementList='"&nbsp"'
+      fi
+    fi
+  done
+  if [[ ! -z "${elementList}" ]] ; then
+    if [[ "${elementList}" != '"&nbsp","&nbsp","&nbsp","&nbsp","&nbsp","&nbsp","&nbsp"' ]] ; then
+    motdJSString='
+  <div class="message">
+    <script type="text/javascript">
+      var motd = ['"${elementList}"'];
+      document.write(motd[new Date().getDay()]);
+    </script>
+  <div>'
+    fi 
+  fi
+fi
 #    <div class="banner">%s Open Cases -- %s Active Cases -- %s Patches
 #    </div>
 printf '
@@ -823,9 +856,7 @@ printf '
           %s Open Cases -- %s Active Cases -- %s Patches
         </td>        
         <td style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 54%%;">
-          <div class="message">
-            %s
-          <div>
+          %s
         </td>
       </tr>
       </tbody>
@@ -864,7 +895,7 @@ printf '
       </a>
     </td>
   </tr>
-</table>' "${nbOfOpenCases}" "${nbOfActiveCases}" "${jiraData[patchCount]}" "${motd[$(LC_TIME="en_US.UTF-8" date "+%A")]}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${sfCasesWithBugListHREF}" "${HTML_RESOURCES_DIR}" "${sfOldCasesWithoutBugListHREF}" "${HTML_RESOURCES_DIR}" 
+</table>' "${nbOfOpenCases}" "${nbOfActiveCases}" "${jiraData[patchCount]}" "${motdJSString}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${sfCasesWithBugListHREF}" "${HTML_RESOURCES_DIR}" "${sfOldCasesWithoutBugListHREF}" "${HTML_RESOURCES_DIR}" 
 
 if [[ ! -z "${itShouldRingABell}" ]] ; then 
   printf '<div style="margin-top: 50px;display: none"><br><audio controls="controls" autoplay="autoplay"> <source src="%s/bell.mp3" type="audio/mpeg"> <source src="%s/bell.wav" type="audio/wav">Your browser does not support the audio element. </audio><br></div>' "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}"
