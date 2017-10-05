@@ -25,13 +25,25 @@ body
 
 }
 
+#banner td
+{
+  background-color: #000000;
+  padding: 0;
+  margin: 0;
+  border-collapse: collapse;
+  max-width: none;
+  width: auto;
+}
+
 #caseworklist td
 {
 	
 	border-top: 1px solid gray;
         text-overflow:clip;
-        padding-right: 15px;
+        padding-left: 7px;
+        padding-right: 7px;
         white-space: nowrap;
+        position:relative;
 }
 
 #bugWorkList td
@@ -43,7 +55,7 @@ body
 	padding-right: 15px;
 }
 
-.banner 
+#banner tr
 {
         font-family:'APHont Bold', sans-serif;
 	font-weight: 900;
@@ -59,6 +71,27 @@ body
         text-overflow: clip;
 }
 
+
+#banner tbody {
+  background-color: #000000;
+  padding: 0;
+  margin: 0; 
+  border-collapse: collapse;
+  max-width: none;
+  width: auto;
+  min-width: 100%%;
+}
+
+#banner {
+  style="background-color: #000000;
+  padding: 0; 
+  margin: 0; 
+  border-collapse: collapse;
+  max-width: none;
+  width: auto;
+  min-width: 100%%;"
+}
+
 #caseworklist 
 {
         font-family:'APHont Bold', sans-serif;
@@ -66,6 +99,9 @@ body
 	font-weight: 900;
 	font-size: 28px;
         letter-spacing: 1px;
+        padding-left: 7px;
+        padding-right: 7px;
+        position:relative;
 	table-layout: fixed;
 	border-collapse:collapse;
 	margin: 0px;
@@ -173,10 +209,34 @@ table.fixed { table-layout:fixed; }
     left:20%;
     position: relative;
     -webkit-animation-name: translation; /* Safari 4.0 - 8.0 */
-    -webkit-animation-duration: 4s; /* Safari 4.0 - 8.0 */
+    -webkit-animation-duration: 60s; /* Safari 4.0 - 8.0 */
+    -webkit-animation-iteration-count: infinite; /* Safari 4.0 - 8.0 */
     animation-name: translation;
     animation-duration: 60s;
     animation-iteration-count: infinite;
+}
+
+.escalated {
+    background-color: #4d0000;
+    -webkit-animation-name: escalated; 
+    -webkit-animation-duration: 20s; 
+    -webkit-animation-iteration-count: infinite; 
+    animation-name: escalated;
+    animation-duration: 20s;
+    animation-iteration-count: infinite;
+
+}
+
+.inner-circle {
+   position: absolute;
+   background: red;
+   border-radius: 50%;
+   height: 17px;
+   width: 17px;
+
+   top: 9px;
+   left: -2px;
+
 }
 
 /* Safari 4.0 - 8.0 */
@@ -191,5 +251,25 @@ table.fixed { table-layout:fixed; }
     0% {left:20%;}
     50%   {left:-20%;}
     100%   {left:20%;}
+}
+
+/* Safari 4.0 - 8.0 */
+@-webkit-keyframes escalated {
+    0% {text-shadow: 0px 0px #cccccc;}
+    0.50% {text-shadow: 20px 4px red;}
+    1% {text-shadow: -20px -4px red;}
+    1.50% {text-shadow: 20px 4px red;}
+    2% {text-shadow: -20px -4px red;}
+    18% {text-shadow: 0px 0px #cccccc;}
+}
+
+/* Standard syntax */
+@keyframes escalated {
+    0% {text-shadow: 0px 0px #cccccc;}
+    0.50% {text-shadow: 20px 4px red;}
+    1% {text-shadow: -20px -4px red;}
+    1.50% {text-shadow: 20px 4px red;}
+    2% {text-shadow: -20px -4px red;}
+    18% {text-shadow: 0px 0px #cccccc;}
 }
 

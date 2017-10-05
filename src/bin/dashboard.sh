@@ -350,6 +350,9 @@ sfData[Number_Of_Old_Cases_Without_Bug]=""
 sfData[Number_Of_Cases_In_Worklist]=""
 sfData[Number_Of_Open_Cases]=""
 sfData[Number_Of_Active_Cases]=""
+sfData[Number_Of_Escalated_Cases]=""
+sfData[Number_Of_Cases_Closed_Last_Two_Weeks]=""
+sfData[Number_Of_Cases_Open_Last_Two_Weeks]=""
 
 #
 # jq filter to retrieve the single values from the JSON in the salesforce answer PLUS the Number_Of_Cases_In_Worklist
@@ -379,12 +382,14 @@ sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${
 sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfCountWorkListSOQL}")'"}'
 sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfOpenCasesSOQL}")'"}'
 sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfActiveCasesSOQL}")'"}'
+sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfEscalatedCasesSOQL}")'"}'
+sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfClosedLastTwoWeeksSOQL}")'"}'
+sf[batchRequestBody]="${sf[batchRequestBody]}"',{"method" : "GET", "url" : "'"${sf[aPIVersion]}"'/query/?q='$(python -c "import urllib;print urllib.quote(raw_input())" <<< "${sfOpenLastTwoWeeksSOQL}")'"}'
 sf[batchRequestBody]="${sf[batchRequestBody]}"']}'
 if [ ! -z "${DBG}" ] ; then
   set +x 
 fi
-
-
+ 
 # set HTML_RESOURCES_DIR to another value for test
 # used in the HTML generated
 if [[ -z "${HTML_RESOURCES_DIR}"  ]] ; then
@@ -652,6 +657,7 @@ printf '
   <thead style="font-size: %s;">
       <th>Case %s</th>
       <th>Status</th>
+      <th>!</th>
       <th>Sev.</th>
       <th>SLA Deadline</th>
       <th>Subject</th>
@@ -661,6 +667,7 @@ printf '
   </thead>
   <tbody>
     <colgroup>
+      <col width="0%%" />
       <col width="0%%" />
       <col width="0%%" />
       <col width="0%%" />
@@ -690,7 +697,7 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
       exec 2> /tmp/dbg.dashboard
       set -x 
     fi
-    eval $(printf '%s' "${records}" | jq -r '.['"${nbOfRecordsDisplayed}"'] | (@sh "accountName=\(.Account.Name) caseNumber=\(.CaseNumber) contactName=\(.Contact.LastName) last=\(.LastSupportCommentBy__c) ownerName=\(.Owner.FirstName) sLADeadline=\(.SLA_Deadline__c) sev=\(.Severity__c) issueNotFixedYet=\(.IssueNotFixedYet__c) lastPublicSupportCommentDateTime=\(.LastCaseCommentFromBonitaSoft__c) lastPublicCommentDateTime=\(.LastPublicCommentDateTime__c) lastActiveStatusDateTime=\(.LastActiveStatusDateTime__c) status=\(.Status) subject=\(.Subject) caseUrl=\(.attributes.url) subscriptionId=\(.Subscription__c) ")')
+    eval $(printf '%s' "${records}" | jq -r '.['"${nbOfRecordsDisplayed}"'] | (@sh "accountName=\(.Account.Name) caseNumber=\(.CaseNumber) contactName=\(.Contact.LastName) last=\(.LastSupportCommentBy__c) ownerName=\(.Owner.FirstName) sLADeadline=\(.SLA_Deadline__c) sev=\(.Severity__c) issueNotFixedYet=\(.IssueNotFixedYet__c) lastPublicSupportCommentDateTime=\(.LastCaseCommentFromBonitaSoft__c) lastPublicCommentDateTime=\(.LastPublicCommentDateTime__c) lastActiveStatusDateTime=\(.LastActiveStatusDateTime__c) status=\(.Status) subject=\(.Subject) caseUrl=\(.attributes.url) subscriptionId=\(.Subscription__c) isEscalated=\(.IsEscalated) ")')
     caseUrl="${serverUrl}"'/apex/CaseView?id='"${caseUrl##*/}"
     subscriptionUrl="${serverUrl}/${subscriptionId}"
     if [ ! -z "${DBG}" ] ; then
@@ -703,11 +710,10 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
       fi
     fi
     if [ ! -z "${ownerName}" ] ; then
-      ownerName="${ownerName%% *}"
-      if [ "${ownerName}" = null ] ; then
+      if [ "${ownerName}" = null -o "${ownerName}" = Bonitasoft ] ; then
         ownerName=""
-      else 
-        last="${ownerName}"
+      else
+        last="${ownerName%% *}"
       fi
     fi
     if [ -z "${last}" ] ; then
@@ -719,6 +725,7 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
     else
       diffInSeconds=$(date -d "${sLADeadline}" -u "+%s ${seconds}-p" | dc)
     fi
+
     class="${sev,*}"_sla_td
     if [[ "${sLADeadline}" =~ [0-9] ]] ; then
       if (( "${diffInSeconds}" < 3600 )) ; then
@@ -751,6 +758,18 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
         fi
       fi
     fi
+    isEscalatedDiv=
+    if [ "${isEscalated}" = true ] ; then
+      if [[ "${class}" == dangerous_sla_td ]] ; then
+        isEscalatedDiv='<div class="inner-circle dangerous_sla_td">&nbsp;</div>'
+      elif [[ "${class}" == updated_in_progress_td ]] ; then
+        isEscalatedDiv='<div class="inner-circle updated_in_progress_td" style="color: red">&nbsp;</div>'
+      else
+        isEscalatedDiv='<div class="inner-circle">&nbsp;</div>'
+      fi
+    fi
+
+
     printf '
     <tr>
         <td>
@@ -763,6 +782,7 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
             %s
           </a>
         </td>
+        <td>%s</td>
         <td>
           <a class="%s" href="%s" target="_blank" style="display: block;">
             %s
@@ -793,11 +813,11 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
             %s
           </a>
         </td>
-    </tr>\n' "${class}" "${caseUrl}" "${caseNumber}" "${class}" "${caseUrl}" "${status}" "${class}" "${caseUrl}" "${sev}" "${class}" "${caseUrl}" "${sLADeadline}" "${class}" "${caseUrl}" "${subject}" "${class}" "${subscriptionUrl}" "${accountName}" "${class}" "${caseUrl}" "${contactName}" "${class}" "${caseUrl}" "${last}"
+    </tr>\n' "${class}" "${caseUrl}" "${caseNumber}" "${class}" "${caseUrl}" "${status}" "${isEscalatedDiv}" "${class}" "${caseUrl}" "${sev}" "${class}" "${caseUrl}" "${sLADeadline}" "${class}" "${caseUrl}" "${subject}" "${class}" "${subscriptionUrl}" "${accountName}" "${class}" "${caseUrl}" "${contactName}" "${class}" "${caseUrl}" "${last}"
     nbOfRecordsDisplayed=$(( nbOfRecordsDisplayed + 1))
   done
 else
-  printf '<tr class="s3_sla_td"><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:1px;">%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:12em;">%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden;max-width:6em;">%s</td><td>%s</td></tr>\n' "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"  "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;"  "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
+  printf '<tr class="s3_sla_td"><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:1px;">%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:12em;">%s</td><td style="white-space: nowrap; text-overflow:ellipsis; overflow: hidden;max-width:6em;">%s</td><td>%s</td></tr>\n' "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"  "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;" "&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;"  "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
 fi
 printf '</tbody></table></div>\n'
 nbNotDisplayed=$(( sfData[Number_Of_Cases_In_Worklist] - nbOfRecordsDisplayed ))
@@ -846,16 +866,33 @@ if [[ ${#motd[@]} > 0 ]] ; then
     fi 
   fi
 fi
+let diffOpenClosed=$(( sfData[Number_Of_Cases_Open_Last_Two_Weeks] - sfData[Number_Of_Cases_Closed_Last_Two_Weeks] ))
+if (( diffOpenClosed > 0 )) ; then
+  diffOpenClosedString=+"${diffOpenClosed}"
+elif (( diffOpenClosed < 0 )) ; then
+  diffOpenClosedString=-"${diffOpenClosed}"
+else
+  diffOpenClosedString="${diffOpenClosed}"
+fi
+
+if (( sfData[Number_Of_Escalated_Cases] == 0 )) ; then
+  statBannerTd='<td style="min-width: 46%%;">
+  '"${nbOfOpenCases}"' Open ('"${diffOpenClosedString}"') - '"${nbOfActiveCases}"' Active - 0 Escalated - '"${jiraData[patchCount]}"' Patches - '"${sfData[Number_Of_Cases_Open_Last_Two_Weeks]}"' new
+  </td>'
+else
+  statBannerTd='<td class="escalated" style="min-width: 46%%;">
+  '"${nbOfOpenCases}"' Open ('"${diffOpenClosedString}"') - '"${nbOfActiveCases}"' Active - '"${sfData[Number_Of_Escalated_Cases]}"' Escalated - '"${jiraData[patchCount]}"' Patches - '"${sfData[Number_Of_Cases_Open_Last_Two_Weeks]}"' new
+  </td>'
+fi
+
 #    <div class="banner">%s Open Cases -- %s Active Cases -- %s Patches
 #    </div>
 printf '
-    <table style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 100%%;">
-      <tbody style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 100%%;">
-      <tr class="banner">
-        <td style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 46%%;">
-          %s Open Cases -- %s Active Cases -- %s Patches
-        </td>        
-        <td style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 54%%;">
+    <table id="banner">
+      <tbody>
+      <tr>
+          %s     
+        <td style="min-width: 54%%;">
           %s
         </td>
       </tr>
@@ -895,7 +932,7 @@ printf '
       </a>
     </td>
   </tr>
-</table>' "${nbOfOpenCases}" "${nbOfActiveCases}" "${jiraData[patchCount]}" "${motdJSString}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${sfCasesWithBugListHREF}" "${HTML_RESOURCES_DIR}" "${sfOldCasesWithoutBugListHREF}" "${HTML_RESOURCES_DIR}" 
+</table>' "${statBannerTd}" "${motdJSString}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${sfCasesWithBugListHREF}" "${HTML_RESOURCES_DIR}" "${sfOldCasesWithoutBugListHREF}" "${HTML_RESOURCES_DIR}" 
 
 if [[ ! -z "${itShouldRingABell}" ]] ; then 
   printf '<div style="margin-top: 50px;display: none"><br><audio controls="controls" autoplay="autoplay"> <source src="%s/bell.mp3" type="audio/mpeg"> <source src="%s/bell.wav" type="audio/wav">Your browser does not support the audio element. </audio><br></div>' "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}"
