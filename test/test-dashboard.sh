@@ -18,9 +18,9 @@ if [ ! -d "${BUILD_DIR}" ] ; then
   mkdir "${BUILD_DIR}"
 fi
 
+unset TEST_DASHBOARD
 TEST_DASHBOARD=yes
 export TEST_DASHBOARD
-unset TEST_DASHBOARD
 
 # empty cache
 rm -rf /tmp/dashboard.cache/

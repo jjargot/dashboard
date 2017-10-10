@@ -58,7 +58,7 @@ getNext18HoursOfWorkISODateTime() {
     # Sunday => outside Business Hour
     delayInSecondsToNextGrenobleOfficeOpeningHour=$(date -u -d 'TZ="Europe/Paris" next monday '"${grenobleOfficeOpeningHourParisTZ}" "+%s ${currentDateTimeInSecondsSinceEPOCH}-p" | dc)
     next18hoursLimitDateTime=$(date --iso-8601=seconds -u -d "+18 hour ${delayInSecondsToNextGrenobleOfficeOpeningHour} second")
-    printf "%sZ" ${next18hoursLimitDateTime%??????}
+    printf "%sZ" "${next18hoursLimitDateTime%??????}"
     return 0
   else
     sanFranciscoOfficeClosingDateTimeInSecondsSinceEPOCH=$(date -u -d 'TZ="Europe/Paris" '"${sanFranscicoOfficeClosingParisTZ}" "+%s")
@@ -69,7 +69,7 @@ getNext18HoursOfWorkISODateTime() {
         # => outside Business Hour
         delayInSecondsToNextGrenobleOfficeOpeningHour=$(date -u -d 'TZ="Europe/Paris" next monday '"${grenobleOfficeOpeningHourParisTZ}" "+%s ${currentDateTimeInSecondsSinceEPOCH}-p" | dc)
         next18hoursLimitDateTime=$(date --iso-8601=seconds -u -d "+18 hour ${delayInSecondsToNextGrenobleOfficeOpeningHour} second")
-        printf "%sZ" ${next18hoursLimitDateTime%??????}
+        printf "%sZ" "${next18hoursLimitDateTime%??????}"
         return 0
       else
         # => Business Hour
@@ -78,7 +78,7 @@ getNext18HoursOfWorkISODateTime() {
         nextGrenobleOfficeOpeningDateTimeInSecondsSinceEPOCH=$(date -u -d 'TZ="Europe/Paris" next monday '"${grenobleOfficeOpeningHourParisTZ}" "+%s")
         next18hoursLimitInSecondsSinceEPOCH=$(( (nextGrenobleOfficeOpeningDateTimeInSecondsSinceEPOCH + 64800) - delayInSecondsToSanFranciscoClosingHour ))
         next18hoursLimitDateTime=$(date --iso-8601=seconds -u -d "@${next18hoursLimitInSecondsSinceEPOCH}")
-        printf "%sZ" ${next18hoursLimitDateTime%??????}
+        printf "%sZ" "${next18hoursLimitDateTime%??????}"
         return 0
       fi
     else
@@ -89,7 +89,7 @@ getNext18HoursOfWorkISODateTime() {
           # => outside Business Hour
           delayInSecondsToNextGrenobleOfficeOpeningHour=$(( GrenobleOfficeOpeningDateTimeInSecondsSinceEPOCH - currentDateTimeInSecondsSinceEPOCH ))
           next18hoursLimitDateTime=$(date --iso-8601=seconds -u -d "+18 hour ${delayInSecondsToNextGrenobleOfficeOpeningHour} second")
-          printf "%sZ" ${next18hoursLimitDateTime%??????}
+          printf "%sZ" "${next18hoursLimitDateTime%??????}"
           return 0
         else
           # => Business Hour
@@ -98,7 +98,7 @@ getNext18HoursOfWorkISODateTime() {
           nextGrenobleOfficeOpeningDateTimeInSecondsSinceEPOCH=$(date -u -d 'TZ="Europe/Paris" +1 day '"${grenobleOfficeOpeningHourParisTZ}" "+%s")
           next18hoursLimitInSecondsSinceEPOCH=$(( (nextGrenobleOfficeOpeningDateTimeInSecondsSinceEPOCH + 64800) - delayInSecondsToSanFranciscoClosingHour ))
           next18hoursLimitDateTime=$(date --iso-8601=seconds -u -d "@${next18hoursLimitInSecondsSinceEPOCH}")
-          printf "%sZ" ${next18hoursLimitDateTime%??????}
+          printf "%sZ" "${next18hoursLimitDateTime%??????}"
           return 0
         fi
       else
@@ -107,7 +107,7 @@ getNext18HoursOfWorkISODateTime() {
           # => outside Business Hour
           delayInSecondsToNextGrenobleOfficeOpeningHour=$(date -u -d 'TZ="Europe/Paris" '"${grenobleOfficeOpeningHourParisTZ}" "+%s ${currentDateTimeInSecondsSinceEPOCH}-p" | dc)
           next18hoursLimitDateTime=$(date --iso-8601=seconds -u -d "+18 hour ${delayInSecondsToNextGrenobleOfficeOpeningHour} second")
-          printf "%sZ" ${next18hoursLimitDateTime%??????}
+          printf "%sZ" "${next18hoursLimitDateTime%??????}"
           return 0
         else
           # => Business Hour
@@ -125,7 +125,7 @@ getNext18HoursOfWorkISODateTime() {
           fi
           next18hoursLimitInSecondsSinceEPOCH=$(( (nextGrenobleOfficeOpeningDateTimeInSecondsSinceEPOCH + 64800) - delayInSecondsToSanFranciscoClosingHour ))
           next18hoursLimitDateTime=$(date --iso-8601=seconds -u -d "@${next18hoursLimitInSecondsSinceEPOCH}")
-          printf "%sZ" ${next18hoursLimitDateTime%??????}
+          printf "%sZ" "${next18hoursLimitDateTime%??????}"
           return 0
         fi
       fi
@@ -189,14 +189,14 @@ getSOQLClauseForSLADeadlineOutsideWorkingHours() {
 # the output is formated is a way it can be used in a SOQL query 
 getSanFranciscoOfficeClosingHourISODateTime() { 
   local nextDate=""
-  if [ $(date -u "+%u") -lt 5 ] ; then
+  if [ "$(date -u "+%u")" -lt 5 ] ; then
     nextDate=$(date --iso-8601=seconds -d 'TZ="Europe/Paris" +1 day 03:00' -u)
-  elif [ $(date -u "+%u") -eq 6 ] ; then
+  elif [ "$(date -u "+%u")" -eq 6 ] ; then
     nextDate=$(date --iso-8601=seconds -d 'TZ="Europe/Paris" 03:00' -u)
-  elif [ $(date -u "+%u") -eq 7 ] ; then
+  elif [ "$(date -u "+%u")" -eq 7 ] ; then
     nextDate=$(date --iso-8601=seconds -d 'TZ="Europe/Paris" -1 day 03:00' -u)
   fi
-  printf "%sZ" ${nextDate%??????}
+  printf "%sZ" "${nextDate%??????}"
 }
 
 
@@ -204,16 +204,18 @@ getSanFranciscoOfficeClosingHourISODateTime() {
 # return the ISO date of the day that is 183 days in the past
 # the output is formated is a way it can be used in a SOQL query 
 get183daysInPastISODate() {
-  local nextDate=$(date --iso-8601=seconds -d '-183 days' -u)
-  printf "%sZ" ${nextDate%??????}
+  local nextDate
+  nextDate=$(date --iso-8601=seconds -d '-183 days' -u)
+  printf "%sZ" "${nextDate%??????}"
 }
 
 #
 # return the ISO date of the day that is 14 days in the past
 # the output is formated is a way it can be used in a SOQL query 
 get14daysInPastISODate() {
-  local nextDate=$(date --iso-8601=seconds -d '-14 days' -u)
-  printf "%sZ" ${nextDate%??????}
+  local nextDate
+  nextDate=$(date --iso-8601=seconds -d '-14 days' -u)
+  printf "%sZ" "${nextDate%??????}"
 }
 
 #
@@ -232,10 +234,10 @@ getDataWithCache() {
       useCache=no
     fi
   fi
-  if [ -f "${cache[sfFile]}" -a "${useCache}" = yes ] ; then
+  if [[ -f "${cache[sfFile]}" && "${useCache}" = yes ]] ; then
     durationInSecondsSinceTheCacheWasUpdated=$(date -d "$(stat "${cache[sfFile]}" | sed -n 's/^Modify: //p')" -u "+""$(date -u +%s)"" %s-p" | dc)
   fi
-  if [ \( "${useCache}" = no -a "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${minimalTimeWithoutRequestsInSeconds}" \) -o "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${cache[timeToLiveInSeconds]}" ] ; then
+  if [[ ( "${useCache}" = no && "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${minimalTimeWithoutRequestsInSeconds}" ) || "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${cache[timeToLiveInSeconds]}" ]] ; then
     sfData[source]="(i)"
     sfData[serverUrl]='https://eu4.salesforce.com/services/Soap/c/26.0/00D20000000NBwJ/0DFD00000000uIk'
     sfData[response]='{"hasErrors":false,"results":[{"statusCode":200,"result":
@@ -253,11 +255,11 @@ getDataWithCache() {
 {"totalSize":1,"done":true,"records":[{"attributes":{"type":"AggregateResult"},"Number_Of_Open_Cases":0}]}},{"statusCode":200,"result":
 {"totalSize":1,"done":true,"records":[{"attributes":{"type":"AggregateResult"},"Number_Of_Active_Cases":0}]}}]}'
     sf_login
-    if [ ! -z "${sf[exit_status]}" -a ! -z "${sf[http_code]}" ] ; then 
-      if [ "${sf[exit_status]}" -eq 0 -a "${sf[http_code]}" -eq 200 ] ; then       
+    if [[ ! -z "${sf[exit_status]}" && ! -z "${sf[http_code]}" ]] ; then 
+      if [[ "${sf[exit_status]}" -eq 0 && "${sf[http_code]}" -eq 200 ]] ; then       
         sf_batch
-        if [ ! -z "${sf[exit_status]}" -a ! -z "${sf[http_code]}" ] ; then 
-          if [ "${sf[exit_status]}" -eq 0 -a "${sf[http_code]}" -eq 200 ] ; then
+        if [[ ! -z "${sf[exit_status]}" && ! -z "${sf[http_code]}" ]] ; then 
+          if [[ "${sf[exit_status]}" -eq 0 && "${sf[http_code]}" -eq 200 ]] ; then
             sfData[source]=
             sfData[serverUrl]="${sf[serverUrl]}"
             sfData[response]="${sf[response]}"
@@ -269,20 +271,20 @@ getDataWithCache() {
     fi
   else
     sfData[source]="(c)"
-    sfData[serverUrl]="$(cat "${cache[sfFile]}" | jq -r '.serverUrl')"
-    sfData[response]="$(cat "${cache[sfFile]}" | jq -r '.response')"
+    sfData[serverUrl]="$(jq -r '.serverUrl' "${cache[sfFile]}")"
+    sfData[response]="$(jq -r '.response' "${cache[sfFile]}")"
   fi
   durationInSecondsSinceTheCacheWasUpdated=${cache[timeToLiveInSeconds]}
-  if [ -f "${cache[jiraFile]}" -a "${useCache}" = yes ] ; then
+  if [[ -f "${cache[jiraFile]}" && "${useCache}" = yes ]] ; then
     durationInSecondsSinceTheCacheWasUpdated=$(date -d "$(stat "${cache[jiraFile]}" | sed -n 's/^Modify: //p')" -u "+""$(date -u +%s)"" %s-p" | dc)
   fi
-  if [ \( "${useCache}" = no -a "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${minimalTimeWithoutRequestsInSeconds}" \) -o "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${cache[timeToLiveInSeconds]}" ] ; then
+  if [[ ( "${useCache}" = no && "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${minimalTimeWithoutRequestsInSeconds}" ) || "${durationInSecondsSinceTheCacheWasUpdated}" -ge "${cache[timeToLiveInSeconds]}" ]] ; then
     jiraData[source]="(i)"
     jiraData[issues]='{ "expand": "schema,names", "startAt": 0, "maxResults": 0, "total": 0, "issues": [] }'
     jiraData[patchCount]=0
     searchJql
-    if [ ! -z "${jira[exit_status]}" -a ! -z "${jira[http_code]}" ] ; then
-      if [ "${jira[exit_status]}" -eq 0 -a "${jira[http_code]}" -eq 200 ] ; then
+    if [[ ! -z "${jira[exit_status]}" && ! -z "${jira[http_code]}" ]] ; then
+      if [[ "${jira[exit_status]}" -eq 0 && "${jira[http_code]}" -eq 200 ]] ; then
         jiraData[source]=
         jiraData[issues]="${jira[response]}"
       fi
@@ -290,16 +292,16 @@ getDataWithCache() {
     jira[maxResults]=0
     jira[jql]="${jira[patchCount]}"
     searchJql
-    if [ ! -z "${jira[exit_status]}" -a ! -z "${jira[http_code]}" ] ; then
-      if [ "${jira[exit_status]}" -eq 0 -a "${jira[http_code]}" -eq 200 ] ; then
+    if [[ ! -z "${jira[exit_status]}" && ! -z "${jira[http_code]}" ]] ; then
+      if [[ "${jira[exit_status]}" -eq 0 && "${jira[http_code]}" -eq 200 ]] ; then
         jiraData[patchCount]=$(printf '%s' "${jira[response]}" | jq -r .total)
       fi
     fi
     printf '{ "issues": %s, "patches": {"startAt":0,"maxResults":0,"total":%s,"issues":[]} }' "${jiraData[issues]}" "${jiraData[patchCount]}"  > "${cache[jiraFile]}"
   else
     jiraData[source]="(c)"
-    jiraData[issues]="$(cat "${cache[jiraFile]}" | jq .issues)"
-    jiraData[patchCount]="$(cat "${cache[jiraFile]}" | jq -r .patches.total)"
+    jiraData[issues]="$(jq .issues "${cache[jiraFile]}")"
+    jiraData[patchCount]="$(jq -r .patches.total "${cache[jiraFile]}")"
   fi
 }
 
@@ -409,7 +411,7 @@ eval "$(printf '%s' "${sfData[response]}" | jq -r '(@sh "sfData[Number_Of_Cases_
 # 
 jiraData[maxResults]=$(printf "%s\n" "${jiraData[issues]}" |  jq -r '.maxResults')
 jiraData[total]=$(printf "%s\n" "${jiraData[issues]}" |  jq -r '.total')
-if [ -z "${jiraData[maxResults]}" -o -z "${jiraData[total]}" ] ; then
+if [[ -z "${jiraData[maxResults]}" || -z "${jiraData[total]}" ]] ; then
   jiraData[maxResults]=0
   jiraData[total]=0
 fi
@@ -418,11 +420,7 @@ if [ -z "${TEST_DASHBOARD}" ] ; then
   printf "Content-type: text/html\n\n"
 fi
 
-printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">\n<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0" /><title>Bonitasoft Support Monitoring Dashboards</title><style type="text/css" media="screen, print">
-@font-face {
-  font-family: "APHont Bold";
-  src: url("%s/aphont-bold.ttf");
-}</style>
+printf '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0" /><title>Bonitasoft Support Monitoring Dashboards</title>
 <link rel="stylesheet" type="text/css" href="%s/design.css" media="screen"><script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script><script type="text/javascript">
   var sec = 299; 
 
@@ -482,7 +480,7 @@ printf '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://w
   }
   function formatInBrowserTZISODateString(iSODateTimeString) {
     return formatInBrowserTZISODate(new Date(iSODateTimeString));
-  } ' "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}"
+  } ' "${HTML_RESOURCES_DIR}"
 
 printf '
   function drawTypeBarChart() {
@@ -509,7 +507,6 @@ printf '
           xAxis: { backgroundColor: "#ff8d00"},
           annotations: {
             textStyle: {
-              fontName: "DejaVu Sans Mono",
               fontSize: 28,
               bold: true,
               italic: false,
@@ -551,7 +548,6 @@ printf '
           xAxis: { backgroundColor: "#ff8d00"},
           annotations: {
             textStyle: {
-              fontName: "DejaVu Sans Mono",
               fontSize: 28,
               bold: true,
               italic: false,
@@ -697,23 +693,24 @@ if (( sfData[Number_Of_Cases_In_Worklist] > 0 && sfData[Number_Of_Cases_Listed_I
       exec 2> /tmp/dbg.dashboard
       set -x 
     fi
-    eval $(printf '%s' "${records}" | jq -r '.['"${nbOfRecordsDisplayed}"'] | (@sh "accountName=\(.Account.Name) caseNumber=\(.CaseNumber) contactName=\(.Contact.LastName) last=\(.LastSupportCommentBy__c) ownerName=\(.Owner.FirstName) sLADeadline=\(.SLA_Deadline__c) sev=\(.Severity__c) issueNotFixedYet=\(.IssueNotFixedYet__c) lastPublicSupportCommentDateTime=\(.LastCaseCommentFromBonitaSoft__c) lastPublicCommentDateTime=\(.LastPublicCommentDateTime__c) lastActiveStatusDateTime=\(.LastActiveStatusDateTime__c) status=\(.Status) subject=\(.Subject) caseUrl=\(.attributes.url) subscriptionId=\(.Subscription__c) isEscalated=\(.IsEscalated) ")')
+    eval $(printf '%s' "${records}" | jq -r '.['"${nbOfRecordsDisplayed}"'] | (@sh "accountName=\(.Account.Name) caseNumber=\(.CaseNumber) contactName=\(.Contact.LastName) lastSupportEngineer=\(.LastSupportCommentBy__c) ownerName=\(.Owner.FirstName) sLADeadline=\(.SLA_Deadline__c) sev=\(.Severity__c) issueNotFixedYet=\(.IssueNotFixedYet__c) lastPublicSupportCommentDateTime=\(.LastCaseCommentFromBonitaSoft__c) lastPublicCommentDateTime=\(.LastPublicCommentDateTime__c) lastActiveStatusDateTime=\(.LastActiveStatusDateTime__c) status=\(.Status) subject=\(.Subject) caseUrl=\(.attributes.url) subscriptionId=\(.Subscription__c) isEscalated=\(.IsEscalated) ")')
     caseUrl="${serverUrl}"'/apex/CaseView?id='"${caseUrl##*/}"
     subscriptionUrl="${serverUrl}/${subscriptionId}"
     if [ ! -z "${DBG}" ] ; then
       set +x 
     fi
-    if [ ! -z "${last}" ] ; then
-      last="${last%% *}"
-      if [ "${last}" = null ] ; then
-        last=""
-      fi
-    fi
+    last=
     if [ ! -z "${ownerName}" ] ; then
-      if [ "${ownerName}" = null -o "${ownerName}" = Bonitasoft ] ; then
+      if [[ "${ownerName}" = null || "${ownerName%% *}" = Bonitasoft ]] ; then
         ownerName=""
       else
         last="${ownerName%% *}"
+      fi
+    fi
+    if [ ! -z "${lastSupportEngineer}" ] ; then
+      lastSupportEngineer="${lastSupportEngineer%% *}"
+      if [[ "${lastSupportEngineer}" != null && "${lastSupportEngineer}" != Bonitasoft ]] ; then
+        last="${lastSupportEngineer}"
       fi
     fi
     if [ -z "${last}" ] ; then
@@ -834,7 +831,7 @@ nbOfOpenCases="${sfData[Number_Of_Open_Cases]}"
 nbOfActiveCases="${sfData[Number_Of_Active_Cases]}"
 
 motdJSString='<div>&nbsp</div>'
-if [[ ${#motd[@]} > 0 ]] ; then
+if [[ ${#motd[@]} -gt 0 ]] ; then
   unset jsDOW
   declare -A jsDOW
   jsDOW[Sunday]=0; jsDOW[Monday]=1; jsDOW[Tuesday]=2; jsDOW[Wednesday]=3; jsDOW[Thursday]=4; jsDOW[Friday]=5; jsDOW[Saturday]=6;
@@ -869,18 +866,16 @@ fi
 let diffOpenClosed=$(( sfData[Number_Of_Cases_Open_Last_Two_Weeks] - sfData[Number_Of_Cases_Closed_Last_Two_Weeks] ))
 if (( diffOpenClosed > 0 )) ; then
   diffOpenClosedString=+"${diffOpenClosed}"
-elif (( diffOpenClosed < 0 )) ; then
-  diffOpenClosedString=-"${diffOpenClosed}"
 else
   diffOpenClosedString="${diffOpenClosed}"
 fi
 
 if (( sfData[Number_Of_Escalated_Cases] == 0 )) ; then
-  statBannerTd='<td style="min-width: 46%%;">
+  statBannerTd='<td style="min-width: 46%;">
   '"${nbOfOpenCases}"' Open ('"${diffOpenClosedString}"') - '"${nbOfActiveCases}"' Active - 0 Escalated - '"${jiraData[patchCount]}"' Patches - '"${sfData[Number_Of_Cases_Open_Last_Two_Weeks]}"' new
   </td>'
 else
-  statBannerTd='<td class="escalated" style="min-width: 46%%;">
+  statBannerTd='<td class="escalated" style="min-width: 46%;">
   '"${nbOfOpenCases}"' Open ('"${diffOpenClosedString}"') - '"${nbOfActiveCases}"' Active - '"${sfData[Number_Of_Escalated_Cases]}"' Escalated - '"${jiraData[patchCount]}"' Patches - '"${sfData[Number_Of_Cases_Open_Last_Two_Weeks]}"' new
   </td>'
 fi
@@ -906,33 +901,28 @@ printf '
   <tr style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 100%%;">
     <td style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 46%%;">
       <div id="type_bar_chart" style="height: 100%%;max-width: none; width: auto; min-width: 100%%;">
-      <img src="%s/barchart1.png"></img>
       </div>
       <div id="severity_bar_chart" style="height: 100%%;max-width: none; width: auto; min-width: 100%%;">
-      <img src="%s/barchart2.png"></img>
       </div>
     </td>
     <td style="background-color: #000000; width: 18%%;padding: 0; margin: 0; border-collapse: collapse;">
       <div id="next0930gauge_chart" style="height: 100%%;">
-        <img src="%s/gauge1.png"></img>
       </div>
     </td>
     <td style="background-color: #000000; width: 18%%;padding: 0; margin: 0; border-collapse: collapse;">
       <a href="%s" target="_blank" style="max-width: none; width: auto; min-width: 100%%;">
         <div id="cases_with_bugs_gauge_chart" style="height: 100%%;">
-        <img src="%s/gauge2.png"></img>
         </div>
       </a>
     </td>
     <td style="background-color: #000000; width: 18%%;padding: 0; margin: 0; border-collapse: collapse;">
       <a href="%s" target="_blank" style="max-width: none; width: auto; min-width: 100%%;">
         <div id="old_cases_gauge_chart" style="height: 100%%;">
-        <img src="%s/gauge3.png"></img>
         </div>
       </a>
     </td>
   </tr>
-</table>' "${statBannerTd}" "${motdJSString}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}" "${sfCasesWithBugListHREF}" "${HTML_RESOURCES_DIR}" "${sfOldCasesWithoutBugListHREF}" "${HTML_RESOURCES_DIR}" 
+</table>' "${statBannerTd}" "${motdJSString}" "${sfCasesWithBugListHREF}" "${sfOldCasesWithoutBugListHREF}" 
 
 if [[ ! -z "${itShouldRingABell}" ]] ; then 
   printf '<div style="margin-top: 50px;display: none"><br><audio controls="controls" autoplay="autoplay"> <source src="%s/bell.mp3" type="audio/mpeg"> <source src="%s/bell.wav" type="audio/wav">Your browser does not support the audio element. </audio><br></div>' "${HTML_RESOURCES_DIR}" "${HTML_RESOURCES_DIR}"

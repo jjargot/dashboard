@@ -57,10 +57,9 @@ body
 
 #banner tr
 {
-        font-family:'APHont Bold', sans-serif;
+        font-family: sans-serif;
 	font-weight: 900;
 	font-size: 28px;
-        letter-spacing: 1px;
         background-color: #000000;
         color: #cccccc;
         text-align: center;
@@ -94,11 +93,10 @@ body
 
 #caseworklist 
 {
-        font-family:'APHont Bold', sans-serif;
+        font-family: sans-serif;
 	border-bottom: 1px solid gray;
 	font-weight: 900;
 	font-size: 28px;
-        letter-spacing: 1px;
         padding-left: 7px;
         padding-right: 7px;
         position:relative;
@@ -112,11 +110,10 @@ body
 
 #bugWorkList 
 {
-        font-family:'APHont Bold', sans-serif;
+        font-family: sans-serif;
 	border-bottom: 1px solid gray;
 	font-weight: 900;
 	font-size: 129%;
-        letter-spacing: 1px;
 	table-layout: fixed;
 	border-collapse:collapse;
 	margin: 0px;
@@ -149,11 +146,8 @@ table.fixed { table-layout:fixed; }
 	padding: 3px;
 /* 	border: 2px solid black; */
 	font-size: 3em;
-	font-weight: bold;
-        letter-spacing: 1px;
-/* 	font-family:cursive; */
-	/*font-family: arial, verdana, sans-serif;*/
-        font-family:'APHont Bold', sans-serif;
+	font-weight: 900;
+        font-family: sans-serif;
 	table-layout: fixed;
 	width: 100%;
 }

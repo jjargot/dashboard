@@ -54,7 +54,7 @@ sf_login() {
 #    sf[http_code]=$(printf "%s" "${sf[response]}" | sed -n '${s/^.*http_code \([0-9]*\)$/\1/p}')
 #    sf[response]=$(printf "%s" "${sf[response]}" | sed '${s/http_code [0-9]*$//g}')
     sf[http_code]="${sf[response]##*http_code }"
-    if [ ! -z "${sf[http_code]}" -a "${sf[http_code]}" -eq 200 ] ; then
+    if [[ ! -z "${sf[http_code]}" && "${sf[http_code]}" -eq 200 ]] ; then
 #      sf[serverUrl]=$(printf "%s" "${sf[response]}" | sed -n '${p;q};:1;H;n;$!b1;H;x;s/\n//gp' | sed 's/^.*<serverUrl>\(https:.*\)<.serverUrl>.*$/\1/')
       sf[serverUrl]="${sf[response]##*<serverUrl>}" ; sf[serverUrl]="${sf[serverUrl]%%<?serverUrl>*}"
 #      sf[sessionId]=$(printf "%s" "${sf[response]}" | sed -n '${p;q};:1;H;n;$!b1;H;x;s/\n//gp' | sed 's/^.*<sessionId>\(.*\)<.sessionId>.*$/\1/')
@@ -140,7 +140,7 @@ sf_query() {
 # if curl exit status is 0, then sf[http_code] is set with the HTTP code from the answer, and sf[response] contains the JSON of the HTTP answer's body.
 #
 sf_batch() {
-  if [ -z "${sf[serverUrl]}" -o -z "${sf[batchRequestBody]}" ] ; then
+  if [[ -z "${sf[serverUrl]}" || -z "${sf[batchRequestBody]}" ]] ; then
     return 1
   fi
   sf[response]=$(curl -s --connect-timeout "${sf[connect-timeout]}" --max-time "${sf[max-time]}" -w 'http_code %{http_code}' -X POST "${sf[serverUrl]%%Soap/c/*}"data/"${sf[aPIVersion]}"/composite/batch -H 'Content-Type: application/json' -H "Authorization: Bearer ${sf[sessionId]}" -d "${sf[batchRequestBody]}")
