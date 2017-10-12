@@ -224,6 +224,7 @@ get14daysInPastISODate() {
 getDataWithCache() {
   durationInSecondsSinceTheCacheWasUpdated=${cache[timeToLiveInSeconds]}
   useCache=yes
+  sfData[errorMsg]=
   if [[ ! -z "${HTTP_PRAGMA}" ]] ; then
     if [[ "${HTTP_PRAGMA}" == no-cache ]] ; then
       useCache=no
@@ -264,10 +265,18 @@ getDataWithCache() {
             sfData[serverUrl]="${sf[serverUrl]}"
             sfData[response]="${sf[response]}"
             printf '{ "serverUrl": "%s", "response": %s }' "${sfData[serverUrl]}" "${sfData[response]}" > "${cache[sfFile]}"
+          else
+            sfData[errorMsg]="SF batch[curl exit status: ${sf[exit_status]}, HTTP status code: ${sf[http_code]}]"
           fi
+        else
+          sfData[errorMsg]="SF batch[curl exit status: ${sf[exit_status]}, HTTP status code: ${sf[http_code]}]"
         fi
         # sf_logout is useless and take 1 sec approx
-      fi      
+      else
+        sfData[errorMsg]="SF login[curl exit status: ${sf[exit_status]}, HTTP status code: ${sf[http_code]}]"
+      fi
+    else
+      sfData[errorMsg]="SF login[curl exit status: ${sf[exit_status]}, HTTP status code: ${sf[http_code]}]"
     fi
   else
     sfData[source]="(c)"
@@ -398,6 +407,10 @@ if [[ -z "${HTML_RESOURCES_DIR}"  ]] ; then
   HTML_RESOURCES_DIR=/dashboard
 fi
 
+if [[ -z "${CSS_FILE_MD5SUM}"  ]] ; then
+  CSS_FILE_MD5SUM=
+fi
+
 
 ##
 ## M A I N
@@ -420,9 +433,15 @@ if [ -z "${TEST_DASHBOARD}" ] ; then
   printf "Content-type: text/html\n\n"
 fi
 
+if [[ -z "${sfData[errorMsg]}" ]] ; then 
+  refreshDurationInSeconds=299
+else
+  refreshDurationInSeconds=30
+fi
+
 printf '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0" /><title>Bonitasoft Support Monitoring Dashboards</title>
-<link rel="stylesheet" type="text/css" href="%s/design.css" media="screen"><script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script><script type="text/javascript">
-  var sec = 299; 
+<link rel="stylesheet" type="text/css" href="%s/design%s.css" media="screen"><script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script><script type="text/javascript">
+  var sec = %s; 
 
   google.charts.load("current", {packages:["corechart", "gauge"]});
 
@@ -442,7 +461,7 @@ printf '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><meta http-equiv="Con
     if (sec <= 0) {
       document.getElementById("remaining").innerHTML = "";
       document.getElementById("next_refresh").innerHTML = "Reloading ...";
-      location.reload(true);
+      location.reload(false);
     } else {
       var str = "";
       if (sec >= 3600) {
@@ -480,7 +499,7 @@ printf '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><meta http-equiv="Con
   }
   function formatInBrowserTZISODateString(iSODateTimeString) {
     return formatInBrowserTZISODate(new Date(iSODateTimeString));
-  } ' "${HTML_RESOURCES_DIR}"
+  } ' "${HTML_RESOURCES_DIR}" "${CSS_FILE_MD5SUM}" "${refreshDurationInSeconds}"
 
 printf '
   function drawTypeBarChart() {
@@ -870,14 +889,20 @@ else
   diffOpenClosedString="${diffOpenClosed}"
 fi
 
-if (( sfData[Number_Of_Escalated_Cases] == 0 )) ; then
-  statBannerTd='<td style="min-width: 46%;">
-  '"${nbOfOpenCases}"' Open ('"${diffOpenClosedString}"') - '"${nbOfActiveCases}"' Active - 0 Escalated - '"${jiraData[patchCount]}"' Patches - '"${sfData[Number_Of_Cases_Open_Last_Two_Weeks]}"' new
-  </td>'
+if [[ -z "${sfData[errorMsg]}" ]] ; then 
+  if (( sfData[Number_Of_Escalated_Cases] == 0 )) ; then
+    statBannerTd='<td style="min-width: 46%;">
+    '"${nbOfOpenCases}"' Open ('"${diffOpenClosedString}"') - '"${nbOfActiveCases}"' Active - 0 Escalated - '"${jiraData[patchCount]}"' Patches - '"${sfData[Number_Of_Cases_Open_Last_Two_Weeks]}"' new
+    </td>'
+  else
+    statBannerTd='<td class="escalated" style="min-width: 46%;">
+    '"${nbOfOpenCases}"' Open ('"${diffOpenClosedString}"') - '"${nbOfActiveCases}"' Active - '"${sfData[Number_Of_Escalated_Cases]}"' Escalated - '"${jiraData[patchCount]}"' Patches - '"${sfData[Number_Of_Cases_Open_Last_Two_Weeks]}"' new
+    </td>'
+  fi
 else
   statBannerTd='<td class="escalated" style="min-width: 46%;">
-  '"${nbOfOpenCases}"' Open ('"${diffOpenClosedString}"') - '"${nbOfActiveCases}"' Active - '"${sfData[Number_Of_Escalated_Cases]}"' Escalated - '"${jiraData[patchCount]}"' Patches - '"${sfData[Number_Of_Cases_Open_Last_Two_Weeks]}"' new
-  </td>'
+    '"${sfData[errorMsg]}"'
+    </td>'
 fi
 
 #    <div class="banner">%s Open Cases -- %s Active Cases -- %s Patches
@@ -885,18 +910,25 @@ fi
 printf '
     <table id="banner">
       <tbody>
+      <colgroup>
+      <col width="0%%" />
+      <col width="0%%" />
+      <col width="0%%" />
+      </colgroup>
       <tr>
           %s     
         <td style="min-width: 54%%;">
           %s
         </td>
       </tr>
-      </tbody>
-    </table>
-    <div id="lastrefreshpanel"> Last refresh <script type="text/javascript">var cd=new Date(); var ctimestr = intToTwoDigitsString(cd.getHours())+":"+intToTwoDigitsString(cd.getMinutes())+":"+intToTwoDigitsString(cd.getSeconds());document.write(ctimestr);</script>
+      <tr>
+        <div id="lastrefreshpanel"> Last refresh <script type="text/javascript">var cd=new Date(); var ctimestr = intToTwoDigitsString(cd.getHours())+":"+intToTwoDigitsString(cd.getMinutes())+":"+intToTwoDigitsString(cd.getSeconds());document.write(ctimestr);</script>
         <div id="next_refresh">Next refresh in <span id="remaining">25 s</span>
         </div>
     </div>
+      </tr>
+      </tbody>
+    </table>
 <table style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 100%%;">
   <tr style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 100%%;">
     <td style="background-color: #000000; padding: 0; margin: 0; border-collapse: collapse; max-width: none; width: auto; min-width: 46%%;">
